@@ -9,6 +9,11 @@ import { EmailService } from "../services/emailService.js";
 
 const router = express.Router();
 
+// Route de test pour Vercel
+router.get("/test", (req, res) => {
+  res.json({ result: true, message: "Booking route works!", timestamp: new Date() });
+});
+
 // -------------------------
 // 1. CRÉER DEMANDE DE RÉSERVATION
 // -------------------------
