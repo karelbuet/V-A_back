@@ -5,7 +5,7 @@ const SECRET_KEY = process.env.SECRET_KEY;
 /**
  * Génère un token JWT pour un utilisateur
  * @param {Object} user
- * @returns {string} Le token JWT
+ * @returns {string}
  */
 export function generateUserToken(user) {
   return jwt.sign(
