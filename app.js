@@ -59,7 +59,7 @@ const corsOptions = {
       return false;
     });
 
-    console.log("🔍 CORS Origin check:", origin, "Allowed:", isAllowed);
+    // console.log("🔍 CORS Origin check:", origin, "Allowed:", isAllowed);
 
     if (isAllowed) {
       callback(null, true);
@@ -115,6 +115,9 @@ app.use("/calendar", calendarRouter);
 app.use("/sendMail", sendMailRouter);
 app.use("/booking", bookingRouter);
 
+// Routes protégées SANS CSRF (authentification seulement)
+app.use("/cart", authenticateToken, cartRouter);
+
 // Routes avec protection CSRF (sauf actions email)
 app.use((req, res, next) => {
   // Exclure les actions email de la protection CSRF
@@ -127,9 +130,8 @@ app.use((req, res, next) => {
 // Routes d'authentification
 app.use("/auth", logoutRouter);
 
-// Routes protégées
+// Routes protégées avec CSRF
 app.use("/bookings", authenticateToken, bookingRouter);
-app.use("/cart", authenticateToken, cartRouter);
 app.use("/prices", authenticateToken, requireRole(["admin"]), pricesRouter);
 app.use("/token", authenticateToken, tokenInfoRouter);
 
