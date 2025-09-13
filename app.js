@@ -43,7 +43,6 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // ✅ Autoriser les requêtes sans origin (Postman, mobile apps)
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -51,7 +50,7 @@ const corsOptions = {
       callback(new Error("Non autorisé par CORS"));
     }
   },
-  credentials: true, // ✅ OBLIGATOIRE pour les cookies HttpOnly
+  credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: [
     "Content-Type",
