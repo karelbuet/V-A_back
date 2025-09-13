@@ -16,10 +16,6 @@ import { rateLimitConfig } from "../middleware/security.js";
 
 var router = express.Router();
 
-// Route de test pour Vercel
-router.get("/test", (req, res) => {
-  res.json({ result: true, message: "Users route works!", timestamp: new Date() });
-});
 
 // ======================================
 // --- USER MANAGEMENT ROUTES ---
