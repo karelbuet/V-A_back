@@ -157,13 +157,12 @@ router.post("/login", rateLimitConfig.login, async (req, res) => {
 
     const isProd = process.env.NODE_ENV === "production";
 
-    // ✅ Configuration cookies optimisée pour Vercel
+    // ✅ Configuration cookies minimaliste pour Vercel
     const cookieConfig = {
       httpOnly: true,
       secure: isProd,
-      sameSite: isProd ? "none" : "lax",
+      // sameSite supprimé temporairement pour compatibilité Vercel
       path: "/",
-      // Ne pas spécifier domain sur Vercel
     };
 
 
