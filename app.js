@@ -93,12 +93,6 @@ app.get("/", (req, res) => {
   res.json({ result: true, message: "ImmoVA Backend API", status: "running" });
 });
 
-// Debug middleware pour Vercel
-app.use((req, res, next) => {
-  console.log(`🔍 ${req.method} ${req.url} - Headers:`, req.headers);
-  next();
-});
-
 // Routes publiques
 app.use("/users", usersRouter);
 app.use("/comments", commentsRouter);

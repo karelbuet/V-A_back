@@ -7,10 +7,6 @@ import { authorizeRoles } from "../modules/authorizeRoles.js";
 
 const router = express.Router();
 
-// Route de test pour Vercel
-router.get("/test", (req, res) => {
-  res.json({ result: true, message: "Comments route works!", timestamp: new Date() });
-});
 
 // Ajouter un commentaire pour une réservation
 router.post("/", authenticateToken, async (req, res) => {
