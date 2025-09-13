@@ -24,13 +24,12 @@ router.post("/logout", authenticateToken, async (req, res) => {
       // Continue le logout même si la révocation échoue
     }
 
-    // ✅ Supprimer les cookies avec la même config que lors de la création
+    // ✅ Configuration cookies compatible Vercel (identique à login)
     const isProd = process.env.NODE_ENV === "production";
     const clearConfig = {
       httpOnly: true,
       secure: isProd,
-      sameSite: isProd ? "none" : "lax",
-      domain: isProd ? process.env.COOKIE_DOMAIN : undefined,
+      // sameSite supprimé pour compatibilité Vercel
       path: "/",
     };
     
