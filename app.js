@@ -46,14 +46,15 @@ const allowedOrigins = [
 ].filter(Boolean);
 
 const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.error("CORS origin rejected:", origin);
-      callback(new Error("Non autorisé par CORS"));
-    }
-  },
+  origin: true, // ⚠️ TEMPORAIRE - Autoriser tous les domaines pour test CORS
+  // origin: function (origin, callback) {
+  //   if (!origin || allowedOrigins.includes(origin)) {
+  //     callback(null, true);
+  //   } else {
+  //     console.error("CORS origin rejected:", origin);
+  //     callback(new Error("Non autorisé par CORS"));
+  //   }
+  // },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: [
