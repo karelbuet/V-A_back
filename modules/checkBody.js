@@ -28,6 +28,6 @@ export function checkBody(body, keys) {
       return Object.keys(value).length > 0;
     }
 
-    return false; // types non supportés
+    return false;
   });
 }
