@@ -68,7 +68,10 @@ const corsOptions = {
 };
 
 // Application des middlewares de sécurité
-securityHeaders(app);
+// ✅ Désactiver Helmet sur Vercel temporairement
+if (!process.env.VERCEL) {
+  securityHeaders(app);
+}
 app.use(cors(corsOptions));
 app.use(rateLimitConfig.global);
 
