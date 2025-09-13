@@ -40,6 +40,8 @@ const allowedOrigins = [
   "https://v-a-front.vercel.app",
   "https://v-a-back.vercel.app",
   "https://v-a-back-m10ubwsp0-vileaus-projects.vercel.app",
+  // ⚠️ TEMPORAIRE - Autoriser tous les sous-domaines Vercel
+  /^https:\/\/.*\.vercel\.app$/,
   process.env.FRONTEND_URL,
   "http://localhost:3000",
   "http://localhost:5173",
@@ -47,8 +49,19 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function (origin, callback) {
-    console.log("🔍 CORS Origin check:", origin, "Allowed:", allowedOrigins.includes(origin));
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Vérifier si l'origin est autorisé (string ou regex)
+    const isAllowed = !origin || allowedOrigins.some(allowed => {
+      if (typeof allowed === 'string') {
+        return allowed === origin;
+      } else if (allowed instanceof RegExp) {
+        return allowed.test(origin);
+      }
+      return false;
+    });
+
+    console.log("🔍 CORS Origin check:", origin, "Allowed:", isAllowed);
+
+    if (isAllowed) {
       callback(null, true);
     } else {
       console.error("CORS origin rejected:", origin);
