@@ -16,6 +16,12 @@ import { rateLimitConfig } from "../middleware/security.js";
 
 var router = express.Router();
 
+// Debug temporaire pour login
+router.use((req, res, next) => {
+  console.log(`🔍 Users route: ${req.method} ${req.url}`);
+  next();
+});
+
 
 // ======================================
 // --- USER MANAGEMENT ROUTES ---
@@ -120,6 +126,7 @@ router.post("/register", async (req, res) => {
 
 // --- User Login (with Rate Limiting) ---
 router.post("/login", rateLimitConfig.login, async (req, res) => {
+  console.log("🔴 LOGIN ATTEMPT:", { email: req.body?.email, hasPassword: !!req.body?.password });
   try {
 
     if (!checkBody(req.body, ["email", "password"])) {
