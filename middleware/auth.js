@@ -64,7 +64,7 @@ export class SecureAuthService {
       await RefreshToken.create({
         userId: user._id,
         token: refreshToken,
-        expiresAt
+        expiresAt,
       });
 
       return { accessToken, refreshToken };
@@ -85,7 +85,7 @@ export class SecureAuthService {
         issuer: "immova-api",
         audience: "immova-client",
       });
-      
+
       // Ajouter les informations d'expiration au decoded token
       decoded.shouldRenew = this.shouldRenewToken(decoded);
       return decoded;
@@ -103,7 +103,7 @@ export class SecureAuthService {
     const now = Math.floor(Date.now() / 1000);
     const timeUntilExpiry = decoded.exp - now;
     const fifteenMinutes = 15 * 60; // 15 minutes en secondes
-    
+
     return timeUntilExpiry < fifteenMinutes;
   }
 
@@ -111,11 +111,11 @@ export class SecureAuthService {
     try {
       // Vérifier le refresh token JWT
       const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
-      
+
       // Vérifier que le token existe en DB et n'a pas expiré
-      const storedToken = await RefreshToken.findOne({ 
+      const storedToken = await RefreshToken.findOne({
         userId: decoded.userId,
-        token: refreshToken 
+        token: refreshToken,
       });
 
       if (!storedToken) {
@@ -146,7 +146,7 @@ export class SecureAuthService {
       await BlacklistedToken.create({
         token,
         userId,
-        expiresAt
+        expiresAt,
       });
     } catch (error) {
       throw new Error("Erreur lors de la révocation du token");
@@ -187,20 +187,19 @@ export const authenticateToken = async (req, res, next) => {
     // Récupération du token depuis les cookies
     const token = req.cookies?.accessToken;
 
-
     if (!token) {
       return res.status(401).json({ error: "Token manquant" });
     }
 
     const decoded = await SecureAuthService.verifyToken(token);
-    
+
     // Renouvellement automatique si le token va expirer bientôt
     if (decoded.shouldRenew) {
       try {
         const refreshToken = req.cookies?.refreshToken;
         if (refreshToken) {
           const newTokens = await SecureAuthService.refreshTokens(refreshToken);
-          
+
           // Configuration cookies
           const isProd = process.env.NODE_ENV === "production";
           const cookieConfig = {
@@ -223,7 +222,9 @@ export const authenticateToken = async (req, res, next) => {
           });
 
           // Mettre à jour le token décodé
-          const newDecoded = await SecureAuthService.verifyToken(newTokens.accessToken);
+          const newDecoded = await SecureAuthService.verifyToken(
+            newTokens.accessToken
+          );
           req.user = newDecoded;
         } else {
           req.user = decoded;
@@ -234,7 +235,7 @@ export const authenticateToken = async (req, res, next) => {
     } else {
       req.user = decoded;
     }
-    
+
     next();
   } catch (error) {
     // Tentative de refresh automatique
@@ -265,7 +266,9 @@ export const authenticateToken = async (req, res, next) => {
           maxAge: 7 * 24 * 60 * 60 * 1000, // 7 jours
         });
 
-        const decoded = await SecureAuthService.verifyToken(newTokens.accessToken);
+        const decoded = await SecureAuthService.verifyToken(
+          newTokens.accessToken
+        );
         req.user = decoded;
         return next();
       } catch (refreshError) {
@@ -300,9 +303,8 @@ export const csrfProtection = (req, res, next) => {
     const origin = req.get("Origin");
     const referer = req.get("Referer");
     const allowedOrigins = [
-      process.env.FRONTEND_URL || "http://localhost:5173",
-      "http://localhost:5173",
-      "https://your-domain.com",
+      process.env.FRONTEND_URL,
+      "https://v-a-front-ghh5c3rw9-vileaus-projects.vercel.app",
     ];
 
     if (!origin && !referer) {

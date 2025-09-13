@@ -37,10 +37,7 @@ const isProd = process.env.NODE_ENV === "production";
 
 // Configuration CORS sécurisée pour cookies HttpOnly
 const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:5174",
-  "http://localhost:5175",
-  "https://your-domain.vercel.app",
+  "https://v-a-front-ghh5c3rw9-vileaus-projects.vercel.app",
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
