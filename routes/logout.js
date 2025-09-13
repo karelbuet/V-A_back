@@ -24,17 +24,37 @@ router.post("/logout", authenticateToken, async (req, res) => {
       // Continue le logout même si la révocation échoue
     }
 
-    // ✅ Configuration cookies compatible Vercel (identique à login)
+    // ✅ Essayer plusieurs configurations pour supprimer les cookies
     const isProd = process.env.NODE_ENV === "production";
-    const clearConfig = {
+
+    // Configuration actuelle (nouvelle)
+    const newConfig = {
       httpOnly: true,
       secure: isProd,
-      // sameSite supprimé pour compatibilité Vercel
       path: "/",
     };
-    
-    res.clearCookie("accessToken", clearConfig);
-    res.clearCookie("refreshToken", clearConfig);
+
+    // Ancienne configuration (au cas où)
+    const oldConfig = {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: "lax",
+      path: "/",
+    };
+
+    // Supprimer avec les deux configurations
+    res.clearCookie("accessToken", newConfig);
+    res.clearCookie("refreshToken", newConfig);
+    res.clearCookie("accessToken", oldConfig);
+    res.clearCookie("refreshToken", oldConfig);
+
+    // Force suppression avec configuration basique
+    res.clearCookie("accessToken");
+    res.clearCookie("refreshToken");
+
+    // Force expiration des cookies
+    res.cookie("accessToken", "", { maxAge: 0, httpOnly: true, secure: isProd, path: "/" });
+    res.cookie("refreshToken", "", { maxAge: 0, httpOnly: true, secure: isProd, path: "/" });
 
     res.json({
       result: true,
