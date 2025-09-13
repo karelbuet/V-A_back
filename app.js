@@ -37,6 +37,7 @@ const isProd =
 
 const allowedOrigins = [
   "https://v-a-front-ghh5c3rw9-vileaus-projects.vercel.app",
+  "https://v-a-front.vercel.app",
   "https://v-a-back.vercel.app",
   "https://v-a-back-m10ubwsp0-vileaus-projects.vercel.app",
   process.env.FRONTEND_URL,
