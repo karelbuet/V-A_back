@@ -30,13 +30,20 @@ import tokenInfoRouter from "./routes/token-info.js";
 
 const app = express();
 
+// ✅ Configuration pour Vercel - Trust proxy obligatoire
+app.set('trust proxy', 1);
+
 // Détection mode dev / prod
 const isProd = process.env.NODE_ENV === "production";
 
 // Configuration CORS sécurisée pour cookies HttpOnly
 const allowedOrigins = [
   "https://v-a-front-ghh5c3rw9-vileaus-projects.vercel.app",
+  "https://v-a-back.vercel.app",
+  "https://v-a-back-m10ubwsp0-vileaus-projects.vercel.app",
   process.env.FRONTEND_URL,
+  "http://localhost:3000",
+  "http://localhost:5173"
 ].filter(Boolean);
 
 const corsOptions = {
@@ -79,6 +86,11 @@ app.use(cookieParser());
 
 // Handle OPTIONS requests explicitly before CSRF protection
 app.options("*", cors(corsOptions));
+
+// Route racine pour Vercel
+app.get("/", (req, res) => {
+  res.json({ result: true, message: "ImmoVA Backend API", status: "running" });
+});
 
 // Routes publiques
 app.use("/users", usersRouter);
