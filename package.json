@@ -27,7 +27,6 @@
     "node-cache": "^5.1.2",
     "node-fetch": "^3.3.2",
     "nodemailer": "^7.0.6",
-    "stripe": "^18.5.0",
     "winston": "^3.17.0",
     "zod": "^4.1.5"
   },

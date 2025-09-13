@@ -3,15 +3,7 @@ import Cart from "../models/cart.js";
 import Booking from "../models/booking.js";
 import { authenticateToken } from "../middleware/auth.js";
 import fetch from "node-fetch";
-import Stripe from "stripe";
 import nodemailer from "nodemailer";
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error("STRIPE_SECRET_KEY is not defined in environment variables");
-}
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2022-11-15",
-});
 
 const router = express.Router();
 
@@ -221,32 +213,6 @@ router.post("/validate-payment", authenticateToken, async (req, res) => {
   }
 });
 
-// --- Create Stripe Payment Intent ---
-router.post("/create-payment-intent", authenticateToken, async (req, res) => {
-  try {
-    const { orderId, amountToPay } = req.body;
-
-    // Vérifier que le panier existe
-    const cart = await Cart.findOne({ userId: req.user.userId });
-    if (!cart || cart.items.length === 0)
-      return res.status(404).json({ error: "Panier introuvable" });
-
-    // Utiliser amountToPay si fourni, sinon calculer le total du panier
-    const totalPrice =
-      amountToPay || cart.items.reduce((sum, item) => sum + item.price, 0);
-
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(totalPrice * 100), // en centimes
-      currency: "eur",
-      payment_method_types: ["card", "ideal", "klarna"], // ici, on peut ajouter "ideal", "klarna", etc.
-    });
-
-    res.json({ clientSecret: paymentIntent.client_secret });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Erreur serveur" });
-  }
-});
 
 // --- Capture PayPal Order ---
 router.get("/capture-paypal-order", authenticateToken, async (req, res) => {
