@@ -16,11 +16,6 @@ import { rateLimitConfig } from "../middleware/security.js";
 
 var router = express.Router();
 
-// Debug temporaire pour login
-router.use((req, res, next) => {
-  console.log(`🔍 Users route: ${req.method} ${req.url}`);
-  next();
-});
 
 
 // ======================================
@@ -126,7 +121,6 @@ router.post("/register", async (req, res) => {
 
 // --- User Login (with Rate Limiting) ---
 router.post("/login", rateLimitConfig.login, async (req, res) => {
-  console.log("🔴 LOGIN ATTEMPT:", { email: req.body?.email, hasPassword: !!req.body?.password });
   try {
 
     if (!checkBody(req.body, ["email", "password"])) {
@@ -163,13 +157,13 @@ router.post("/login", rateLimitConfig.login, async (req, res) => {
 
     const isProd = process.env.NODE_ENV === "production";
 
-    // ✅ Configuration cookies optimisée pour cross-origin localhost
+    // ✅ Configuration cookies optimisée pour Vercel
     const cookieConfig = {
       httpOnly: true,
       secure: isProd,
       sameSite: isProd ? "none" : "lax",
-      domain: isProd ? process.env.COOKIE_DOMAIN : undefined,
       path: "/",
+      // Ne pas spécifier domain sur Vercel
     };
 
 
