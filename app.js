@@ -131,4 +131,5 @@ app.use(function (err, req, res, next) {
   res.status(status).json({ result: false, error: message });
 });
 
+// Export pour Vercel (serverless)
 export default app;
