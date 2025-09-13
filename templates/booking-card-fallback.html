@@ -1,0 +1,41 @@
+<div class="booking-card" style="border-left-color: #ff9800">
+  <h3 class="booking-title" style="color: #ff9800">
+    ⚠️ Réservation #{{BOOKING_ID_SHORT}}
+  </h3>
+
+  <div class="booking-details">
+    <div class="detail-row">
+      <span class="detail-label">Logement:</span>
+      <span class="detail-value">{{APARTMENT_ID}}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Période:</span>
+      <span class="detail-value">Du {{START_DATE}} au {{END_DATE}}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Prix:</span>
+      <span class="detail-value">{{PRICE}} €</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Demande reçue:</span>
+      <span class="detail-value">{{BOOKED_AT}}</span>
+    </div>
+  </div>
+
+  <div class="admin-link">
+    <a href="{{ADMIN_URL}}"> 📋 Examiner cette réservation </a>
+  </div>
+
+  <div
+    class="info-box"
+    style="
+      background: linear-gradient(135deg, #fff3e0, #ffcc02);
+      border-left-color: #ff9800;
+    "
+  >
+    <p style="color: #ef6c00">
+      <strong>⚠️ Actions rapides temporairement indisponibles</strong>
+      <br />Veuillez utiliser l'interface admin pour traiter cette réservation.
+    </p>
+  </div>
+</div>

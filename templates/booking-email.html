@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ImmoVA - Nouvelle demande de réservation</title>
+    <style>
+      /* Reset et base */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f4f7fa;
+        color: #333;
+        line-height: 1.6;
+      }
+
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+      }
+
+      /* En-tête */
+      .header {
+        background: linear-gradient(135deg, #1976d2, #1565c0);
+        color: white;
+        padding: 30px 20px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .header::before {
+        content: "";
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.05"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+        opacity: 0.3;
+        pointer-events: none;
+      }
+
+      .header h1 {
+        font-size: 2.2rem;
+        margin: 0;
+        font-weight: bold;
+        position: relative;
+        z-index: 1;
+      }
+
+      .header h2 {
+        font-size: 1.2rem;
+        margin: 10px 0 0 0;
+        font-weight: normal;
+        opacity: 0.9;
+        position: relative;
+        z-index: 1;
+      }
+
+      /* Introduction */
+      .intro {
+        background: #f8fafc;
+        padding: 25px 20px;
+        text-align: center;
+        border-left: 4px solid #1976d2;
+        border-right: 4px solid #1976d2;
+      }
+
+      .intro p {
+        font-size: 1.1rem;
+        color: #555;
+        margin: 0;
+      }
+
+      .intro strong {
+        color: #1976d2;
+      }
+
+      /* Réservation card */
+      .booking-card {
+        background: white;
+        padding: 25px;
+        border-left: 5px solid #1976d2;
+        border-right: 5px solid #1976d2;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        transition: transform 0.2s ease;
+      }
+
+      .booking-card:hover {
+        transform: translateY(-2px);
+      }
+
+      .booking-title {
+        color: #1976d2;
+        font-size: 1.4rem;
+        font-weight: bold;
+        margin: 0 0 20px 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .booking-details {
+        background: #f8fafc;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+        border: 1px solid #e2e8f0;
+      }
+
+      .detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding: 8px 0;
+      }
+
+      .detail-row:last-child {
+        margin-bottom: 0;
+      }
+
+      .detail-label {
+        font-weight: 600;
+        color: #374151;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .detail-value {
+        color: #6b7280;
+        font-weight: 500;
+      }
+
+      /* Boutons d'action */
+      .action-buttons {
+        text-align: center;
+        margin: 30px 0;
+        padding: 20px;
+        background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+        border-radius: 12px;
+      }
+
+      .action-title {
+        color: #374151;
+        font-weight: 600;
+        margin-bottom: 20px;
+        font-size: 1.1rem;
+      }
+
+      .btn {
+        display: inline-block;
+        padding: 14px 28px;
+        margin: 0 8px;
+        text-decoration: none;
+        font-weight: bold;
+        border-radius: 25px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        min-width: 140px;
+        text-align: center;
+      }
+
+      .btn-accept {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+      }
+
+      .btn-accept:hover {
+        background: linear-gradient(135deg, #059669, #047857);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
+      }
+
+      .btn-refuse {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        color: white;
+      }
+
+      .btn-refuse:hover {
+        background: linear-gradient(135deg, #dc2626, #b91c1c);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(239, 68, 68, 0.3);
+      }
+
+      /* Info box */
+      .info-box {
+        background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+        padding: 16px;
+        border-radius: 8px;
+        margin: 20px 0;
+        border-left: 4px solid #1976d2;
+      }
+
+      .info-box p {
+        margin: 0;
+        font-size: 0.9rem;
+        color: #1565c0;
+        line-height: 1.5;
+      }
+
+      .info-box strong {
+        font-weight: 600;
+      }
+
+      /* Lien admin */
+      .admin-link {
+        text-align: center;
+        margin: 20px 0;
+        padding: 15px;
+        background: #f8fafc;
+        border-radius: 8px;
+        border-top: 1px solid #e2e8f0;
+      }
+
+      .admin-link a {
+        display: inline-block;
+        padding: 8px 16px;
+        background: #1976d2;
+        color: white;
+        text-decoration: none;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        transition: background 0.2s ease;
+      }
+
+      .admin-link a:hover {
+        background: #1565c0;
+      }
+
+      /* Footer */
+      .footer {
+        background: #374151;
+        color: white;
+        padding: 25px 20px;
+        text-align: center;
+      }
+
+      .footer h3 {
+        margin: 0 0 10px 0;
+        font-size: 1.1rem;
+      }
+
+      .footer p {
+        margin: 0;
+        font-size: 0.85rem;
+        opacity: 0.8;
+        line-height: 1.4;
+      }
+
+      /* Responsive */
+      @media (max-width: 600px) {
+        .container {
+          margin: 0;
+          border-radius: 0;
+        }
+
+        .booking-card {
+          margin: 10px;
+          padding: 20px;
+        }
+
+        .btn {
+          display: block;
+          margin: 8px 0;
+          width: 100%;
+        }
+
+        .detail-row {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 5px;
+        }
+
+        .header h1 {
+          font-size: 1.8rem;
+        }
+      }
+
+      /* Mode sombre (optionnel) */
+      @media (prefers-color-scheme: dark) {
+        .booking-details {
+          background: #f1f5f9;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- En-tête -->
+      <div class="header">
+        <h1>ImmoVA</h1>
+        <h2>{{HEADER_TITLE}}</h2>
+      </div>
+
+      <!-- Introduction -->
+      <div class="intro">
+        <p>
+          Vous avez reçu
+          <strong
+            >{{BOOKINGS_COUNT}} nouvelle{{PLURAL_S}} demande{{PLURAL_S}}</strong
+          >
+          de réservation. <br />Vous pouvez traiter chaque demande directement
+          depuis cet email.
+        </p>
+      </div>
+
+      <!-- Réservations (cette section sera répétée pour chaque réservation) -->
+      {{BOOKINGS_CONTENT}}
+
+      <!-- Footer -->
+      <div class="footer">
+        <h3>ImmoVA</h3>
+        <p>Système de réservation automatisé</p>
+        <p>
+          Cet email a été généré automatiquement. Les actions directes sont
+          sécurisées et auditées.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

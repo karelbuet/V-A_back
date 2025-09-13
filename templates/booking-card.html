@@ -1,0 +1,35 @@
+<div class="booking-card">
+  <div class="booking-details">
+    <div class="detail-row">
+      <span class="detail-label">Logement: </span>
+      <span class="detail-value">{{APARTMENT_ID}}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Période: </span>
+      <span class="detail-value">Du {{START_DATE}} au {{END_DATE}}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Prix: </span>
+      <span class="detail-value">{{PRICE}} €</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Demande reçue:</span>
+      <span class="detail-value">{{BOOKED_AT}}</span>
+    </div>
+  </div>
+
+  <div class="action-buttons">
+    <div class="action-title">Actions rapides</div>
+    <a href="{{ACCEPT_URL}}" class="btn btn-accept"> ACCEPTER </a>
+    <a href="{{REFUSE_URL}}" class="btn btn-refuse"> REFUSER </a>
+  </div>
+
+  <div class="info-box">
+    <p>
+      <strong>💡 Actions directes:</strong> Cliquez sur les boutons ci-dessus
+      pour traiter cette réservation directement. <br />Une page de confirmation
+      s'ouvrira et le client sera automatiquement notifié de votre décision.
+      <br /><strong>⏱️ Ces liens expirent dans 7 jours.</strong>
+    </p>
+  </div>
+</div>
