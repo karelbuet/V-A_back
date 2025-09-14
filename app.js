@@ -77,6 +77,9 @@ const corsOptions = {
     "Accept",
     "Origin",
     "X-Requested-With",
+    "Cache-Control",
+    "Pragma",
+    "Expires"
   ],
   exposedHeaders: ["X-Total-Count"],
   optionsSuccessStatus: 200, // ✅ Pour les anciens navigateurs
@@ -117,6 +120,7 @@ app.use("/booking", bookingRouter);
 
 // Routes protégées SANS CSRF (authentification seulement)
 app.use("/cart", authenticateToken, cartRouter);
+app.use("/bookings", authenticateToken, bookingRouter);
 
 // Routes avec protection CSRF (sauf actions email)
 app.use((req, res, next) => {
@@ -130,8 +134,7 @@ app.use((req, res, next) => {
 // Routes d'authentification
 app.use("/auth", logoutRouter);
 
-// Routes protégées avec CSRF
-app.use("/bookings", authenticateToken, bookingRouter);
+// Routes protégées avec CSRF (si nécessaire)
 app.use("/prices", authenticateToken, requireRole(["admin"]), pricesRouter);
 app.use("/token", authenticateToken, tokenInfoRouter);
 
