@@ -287,12 +287,12 @@ router.get("/disabledDates", async (req, res) => {
       const startDateStr = start.toISOString().split('T')[0];
       const endDateStr = end.toISOString().split('T')[0];
 
-      // Bloquer du jour de début jusqu'à la veille du jour de fin (comme pour les réservations)
-      // Si sélection 22 au 27, bloquer 22,23,24,25,26 (pas le 27)
+      // Bloquer toutes les dates de la période (inclut début et fin)
+      // Les dates bloquées manuellement par admin bloquent complètement la période
       const currentDate = new Date(startDateStr + 'T00:00:00.000Z');
       const finalDate = new Date(endDateStr + 'T00:00:00.000Z');
 
-      for (let date = new Date(currentDate); date < finalDate; date.setDate(date.getDate() + 1)) {
+      for (let date = new Date(currentDate); date <= finalDate; date.setDate(date.getDate() + 1)) {
         disabledDates.push(date.toISOString().split('T')[0]);
       }
     });
