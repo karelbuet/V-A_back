@@ -534,6 +534,13 @@ router.put("/profile/update", authenticateToken, async (req, res) => {
 
 // --- Get Current User Info ---
 router.get("/me", optionalAuth, async (req, res) => {
+  // Empêcher la mise en cache de cette route critique
+  res.set({
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0'
+  });
+
   try {
     if (!req.user) {
       return res.json({
