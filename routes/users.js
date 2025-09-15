@@ -16,8 +16,6 @@ import { rateLimitConfig } from "../middleware/security.js";
 
 var router = express.Router();
 
-
-
 // ======================================
 // --- USER MANAGEMENT ROUTES ---
 // ======================================
@@ -93,7 +91,7 @@ router.post("/register", async (req, res) => {
     const cookieConfig = {
       httpOnly: true, // ✅ Sécurité : pas d'accès JavaScript
       secure: isProd, // ✅ HTTPS uniquement en production
-      sameSite: isProd ? "none" : "lax", // ✅ "none" pour prod cross-domain, "lax" pour dev localhost
+      sameSite: isProd ? "None" : "Lax", // ✅ "none" pour prod cross-domain, "lax" pour dev localhost
       domain: isProd ? process.env.COOKIE_DOMAIN : undefined, // ✅ Pas de domain en dev pour localhost
       path: "/", // ✅ Cookie disponible sur tout le site
     };
@@ -122,7 +120,6 @@ router.post("/register", async (req, res) => {
 // --- User Login (with Rate Limiting) ---
 router.post("/login", rateLimitConfig.login, async (req, res) => {
   try {
-
     if (!checkBody(req.body, ["email", "password"])) {
       return res.json({ result: false, error: "Champs manquants ou vides" });
     }
@@ -161,11 +158,10 @@ router.post("/login", rateLimitConfig.login, async (req, res) => {
     const cookieConfig = {
       httpOnly: true,
       secure: isProd, // HTTPS en production
-      sameSite: isProd ? 'none' : 'lax', // 'none' pour cross-site sur mobile, 'lax' pour dev
+      sameSite: isProd ? "None" : "Lax", // 'none' pour cross-site sur mobile, 'lax' pour dev
       path: "/",
       domain: isProd ? process.env.COOKIE_DOMAIN : undefined, // Domaine pour cookies cross-site
     };
-
 
     res.cookie("accessToken", accessToken, {
       ...cookieConfig,
@@ -179,8 +175,8 @@ router.post("/login", rateLimitConfig.login, async (req, res) => {
 
     // ✅ MOBILE COMPATIBILITY - Headers pour compatibilité mobile
     res.set({
-      'X-Access-Token': accessToken,
-      'X-Refresh-Token': refreshToken
+      "X-Access-Token": accessToken,
+      "X-Refresh-Token": refreshToken,
     });
 
     res.json({
@@ -341,8 +337,9 @@ router.put("/update/phone", authenticateToken, async (req, res) => {
     }
 
     // Validation du format du téléphone
-    const phoneRegex = /^(?:\+33|0)[1-9](?:[0-9]{8})$|^(?:\+33\s?|0)[1-9](?:\s?[0-9]{2}){4}$/;
-    const cleanPhone = phone.trim().replace(/\s/g, '');
+    const phoneRegex =
+      /^(?:\+33|0)[1-9](?:[0-9]{8})$|^(?:\+33\s?|0)[1-9](?:\s?[0-9]{2}){4}$/;
+    const cleanPhone = phone.trim().replace(/\s/g, "");
     if (!phoneRegex.test(cleanPhone) || cleanPhone.length < 10) {
       return res
         .status(400)
@@ -542,9 +539,9 @@ router.put("/profile/update", authenticateToken, async (req, res) => {
 router.get("/me", optionalAuth, async (req, res) => {
   // Empêcher la mise en cache de cette route critique
   res.set({
-    'Cache-Control': 'no-cache, no-store, must-revalidate',
-    'Pragma': 'no-cache',
-    'Expires': '0'
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+    Pragma: "no-cache",
+    Expires: "0",
   });
 
   try {
