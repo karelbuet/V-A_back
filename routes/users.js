@@ -90,8 +90,8 @@ router.post("/register", async (req, res) => {
     // ✅ Configuration cookies optimisée pour cross-origin localhost
     const cookieConfig = {
       httpOnly: true, // ✅ Sécurité : pas d'accès JavaScript
-      secure: isProd, // ✅ HTTPS uniquement en production
-      sameSite: isProd ? "None" : "Lax", // ✅ "none" pour prod cross-domain, "lax" pour dev localhost
+      secure: true, // ✅ HTTPS uniquement en production
+      sameSite: isProd ? "none" : "lax", // ✅ "none" pour prod cross-domain, "lax" pour dev localhost
       domain: isProd ? process.env.COOKIE_DOMAIN : undefined, // ✅ Pas de domain en dev pour localhost
       path: "/", // ✅ Cookie disponible sur tout le site
     };
@@ -158,7 +158,7 @@ router.post("/login", rateLimitConfig.login, async (req, res) => {
     const cookieConfig = {
       httpOnly: true,
       secure: isProd, // HTTPS en production
-      sameSite: isProd ? "None" : "Lax", // 'none' pour cross-site sur mobile, 'lax' pour dev
+      sameSite: isProd ? "none" : "lax", // 'none' pour cross-site sur mobile, 'lax' pour dev
       path: "/",
       domain: isProd ? process.env.COOKIE_DOMAIN : undefined, // Domaine pour cookies cross-site
     };
