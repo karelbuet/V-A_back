@@ -127,7 +127,7 @@ router.get("/property/:property", async (req, res) => {
     // Transformer en objet plus pratique
     const settingsObject = {
       cleaning_fee: 0,
-      linen_option_price: 0,
+      linen_option_price: 25,
       minimum_nights: 1,
       fixed_arrival_days: [],
       fixed_departure_days: []

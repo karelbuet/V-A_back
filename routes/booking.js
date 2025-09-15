@@ -95,7 +95,7 @@ router.post("/create-request", authenticateToken, async (req, res) => {
       const linenSetting = await GlobalSettings.findOne({ settingKey: "linen_option_price" });
 
       cleaningFee = cleaningSetting ? cleaningSetting.settingValue : 0;
-      linenFee = linenSetting ? linenSetting.settingValue : 0;
+      linenFee = linenSetting ? linenSetting.settingValue : 25; // Prix par défaut 25€
     } catch (settingsError) {
       console.error("Erreur récupération paramètres globaux:", settingsError);
       // Continuer avec des frais à 0

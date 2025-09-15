@@ -90,7 +90,7 @@ router.post("/register", async (req, res) => {
     // ✅ Configuration cookies optimisée pour cross-origin localhost
     const cookieConfig = {
       httpOnly: true, // ✅ Sécurité : pas d'accès JavaScript
-      secure: true, // ✅ HTTPS uniquement en production
+      secure: isProd, // ✅ HTTPS uniquement en production
       sameSite: isProd ? "none" : "lax", // ✅ "none" pour prod cross-domain, "lax" pour dev localhost
       domain: isProd ? process.env.COOKIE_DOMAIN : undefined, // ✅ Pas de domain en dev pour localhost
       path: "/", // ✅ Cookie disponible sur tout le site
