@@ -5,21 +5,39 @@
 
   <div class="booking-details">
     <div class="detail-row">
-      <span class="detail-label">Logement:</span>
+      <span class="detail-label">🏡 Logement:</span>
       <span class="detail-value">{{APARTMENT_ID}}</span>
     </div>
     <div class="detail-row">
-      <span class="detail-label">Période:</span>
+      <span class="detail-label">📅 Période:</span>
       <span class="detail-value">Du {{START_DATE}} au {{END_DATE}}</span>
     </div>
     <div class="detail-row">
-      <span class="detail-label">Prix:</span>
+      <span class="detail-label">💰 Prix logement:</span>
       <span class="detail-value">{{PRICE}} €</span>
     </div>
+    {{CLEANING_FEE_ROW}}
+    {{LINEN_OPTION_ROW}}
+    <div class="detail-row total-row">
+      <span class="detail-label">💰 Prix total:</span>
+      <span class="detail-value"><strong>{{TOTAL_PRICE}} €</strong></span>
+    </div>
     <div class="detail-row">
-      <span class="detail-label">Demande reçue:</span>
+      <span class="detail-label">⏰ Demande reçue:</span>
       <span class="detail-value">{{BOOKED_AT}}</span>
     </div>
+  </div>
+
+  <div class="guest-details" style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #ffeaa7;">
+    <div class="guest-title" style="color: #856404; font-weight: bold; margin-bottom: 10px;">👥 Informations voyageurs</div>
+    <div class="detail-row">
+      <span class="detail-label">Adultes:</span>
+      <span class="detail-value">{{ADULTS}}</span>
+    </div>
+    {{CHILDREN_ROW}}
+    {{PETS_SECTION}}
+    {{CONTACT_PHONE_ROW}}
+    {{SPECIAL_REQUESTS_ROW}}
   </div>
 
   <div class="admin-link">

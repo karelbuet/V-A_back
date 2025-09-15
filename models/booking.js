@@ -28,6 +28,81 @@ const bookingSchema = new mongoose.Schema({
   },
   bookedAt: { type: Date, default: Date.now },
   expiresAt: { type: Date },
+
+  // Guest details
+  guestDetails: {
+    adults: {
+      type: Number,
+      default: 1,
+      min: 1,
+      max: 20
+    },
+    children: [{
+      age: {
+        type: Number,
+        min: 0,
+        max: 17
+      }
+    }],
+    pets: [{
+      type: {
+        type: String,
+        trim: true
+      },
+      breed: {
+        type: String,
+        trim: true
+      },
+      weight: {
+        type: Number,
+        min: 0,
+        max: 100
+      }
+    }],
+    specialRequests: {
+      type: String,
+      trim: true,
+      maxlength: 1000
+    },
+    arrivalTime: {
+      type: String,
+      trim: true
+    },
+    contactPhone: {
+      type: String,
+      trim: true
+    }
+  },
+
+  // Services additionnels
+  additionalServices: {
+    cleaning: {
+      included: {
+        type: Boolean,
+        default: false
+      },
+      price: {
+        type: Number,
+        default: 0
+      }
+    },
+    linen: {
+      included: {
+        type: Boolean,
+        default: false
+      },
+      price: {
+        type: Number,
+        default: 0
+      }
+    }
+  },
+
+  // Prix ajusté avec services
+  totalPrice: {
+    type: Number,
+    required: true
+  }
 });
 
 bookingSchema.index({ apartmentId: 1, startDate: 1, endDate: 1 });

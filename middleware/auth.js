@@ -166,11 +166,22 @@ export class SecureAuthService {
 // --- Optional Authentication Middleware ---
 // Does not block if no token is present
 export const optionalAuth = async (req, res, next) => {
-  const token = req.cookies?.accessToken;
+  // ✅ MOBILE COMPATIBILITY - Récupération du token depuis cookies OU header Authorization
+  let token = req.cookies?.accessToken;
+
+  // Fallback vers l'header Authorization pour mobile
+  if (!token && req.headers.authorization) {
+    const authHeader = req.headers.authorization;
+    if (authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    }
+  }
+
   if (!token) {
     req.user = null;
     return next();
   }
+
   try {
     const decoded = await SecureAuthService.verifyToken(token);
     req.user = decoded;
@@ -184,8 +195,16 @@ export const optionalAuth = async (req, res, next) => {
 // Secure cookie-based authentication with auto-refresh
 export const authenticateToken = async (req, res, next) => {
   try {
-    // Récupération du token depuis les cookies
-    const token = req.cookies?.accessToken;
+    // ✅ MOBILE COMPATIBILITY - Récupération du token depuis cookies OU header Authorization
+    let token = req.cookies?.accessToken;
+
+    // Fallback vers l'header Authorization pour mobile
+    if (!token && req.headers.authorization) {
+      const authHeader = req.headers.authorization;
+      if (authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7);
+      }
+    }
 
     if (!token) {
       return res.status(401).json({ error: "Token manquant" });

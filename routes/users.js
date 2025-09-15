@@ -157,12 +157,13 @@ router.post("/login", rateLimitConfig.login, async (req, res) => {
 
     const isProd = process.env.NODE_ENV === "production";
 
-    // ✅ Configuration cookies minimaliste pour Vercel
+    // ✅ Configuration cookies optimisée pour mobile + Vercel
     const cookieConfig = {
       httpOnly: true,
-      secure: isProd,
-      // sameSite supprimé temporairement pour compatibilité Vercel
+      secure: isProd, // HTTPS en production
+      sameSite: isProd ? 'none' : 'lax', // 'none' pour cross-site sur mobile, 'lax' pour dev
       path: "/",
+      domain: isProd ? process.env.COOKIE_DOMAIN : undefined, // Domaine pour cookies cross-site
     };
 
 
@@ -176,6 +177,11 @@ router.post("/login", rateLimitConfig.login, async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 jours
     });
 
+    // ✅ MOBILE COMPATIBILITY - Headers pour compatibilité mobile
+    res.set({
+      'X-Access-Token': accessToken,
+      'X-Refresh-Token': refreshToken
+    });
 
     res.json({
       result: true,

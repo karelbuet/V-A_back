@@ -125,8 +125,8 @@ router.delete("/unblockDates", authenticateToken, async (req, res) => {
 
       // Partie avant (si la période bloquée commence avant la zone à débloquer)
       if (periodStart < unblockStart) {
-        const beforeEnd = new Date(unblockStart);
-        beforeEnd.setDate(beforeEnd.getDate() - 1);
+        // ✅ CORRECTION - La partie avant va jusqu'à la veille du début de déblocage (inclusif)
+        const beforeEnd = new Date(unblockStart.getTime() - 24 * 60 * 60 * 1000);
 
         await new BlockedDate({
           apartmentId,
@@ -139,8 +139,8 @@ router.delete("/unblockDates", authenticateToken, async (req, res) => {
 
       // Partie après (si la période bloquée finit après la zone à débloquer)
       if (periodEnd > unblockEnd) {
-        const afterStart = new Date(unblockEnd);
-        afterStart.setDate(afterStart.getDate() + 1);
+        // ✅ CORRECTION - La partie après commence le lendemain de la fin de déblocage
+        const afterStart = new Date(unblockEnd.getTime() + 24 * 60 * 60 * 1000);
 
         await new BlockedDate({
           apartmentId,
@@ -277,7 +277,7 @@ router.get("/disabledDates", async (req, res) => {
     const disabledDates = [];
     const departureDates = new Set(); // Jours de départ (disponibles pour arrivée)
     
-    // Ajouter les dates bloquées par l'admin (bloquées complètement)
+    // Ajouter les dates bloquées par l'admin
     blockedDates.forEach(period => {
       // ✅ CORRECTION - Extraire directement la date UTC comme date logique
       const start = new Date(period.startDate);
@@ -287,13 +287,24 @@ router.get("/disabledDates", async (req, res) => {
       const startDateStr = start.toISOString().split('T')[0];
       const endDateStr = end.toISOString().split('T')[0];
 
-      // Bloquer toutes les dates de la période (inclut début et fin)
-      // Les dates bloquées manuellement par admin bloquent complètement la période
+      // ✅ LOGIQUE COHÉRENTE - Même logique que pour les réservations
+      // Bloquer du début jusqu'à la veille de la fin (le dernier jour reste disponible pour arrivée)
       const currentDate = new Date(startDateStr + 'T00:00:00.000Z');
       const finalDate = new Date(endDateStr + 'T00:00:00.000Z');
 
-      for (let date = new Date(currentDate); date <= finalDate; date.setDate(date.getDate() + 1)) {
-        disabledDates.push(date.toISOString().split('T')[0]);
+      // Si c'est un blocage d'une seule journée, on la bloque entièrement
+      if (startDateStr === endDateStr) {
+        disabledDates.push(startDateStr);
+      } else {
+        // Sinon, bloquer jusqu'à la veille de la fin
+        const lastBlockedDate = new Date(finalDate.getTime() - 24 * 60 * 60 * 1000);
+
+        for (let date = new Date(currentDate); date <= lastBlockedDate; date.setDate(date.getDate() + 1)) {
+          disabledDates.push(date.toISOString().split('T')[0]);
+        }
+
+        // Le jour de fin devient disponible pour arrivée
+        departureDates.add(endDateStr);
       }
     });
 
@@ -310,11 +321,14 @@ router.get("/disabledDates", async (req, res) => {
       // Le jour de départ est disponible pour nouvelle arrivée
       departureDates.add(endDateStr);
 
-      // Bloquer du jour d'arrivée jusqu'à la veille du départ
+      // ✅ CORRECTION - Bloquer du jour d'arrivée jusqu'à la veille du départ (inclusif)
       const currentDate = new Date(startDateStr + 'T00:00:00.000Z');
       const finalDate = new Date(endDateStr + 'T00:00:00.000Z');
 
-      for (let date = new Date(currentDate); date < finalDate; date.setDate(date.getDate() + 1)) {
+      // Calculer la dernière nuit (veille du jour de départ)
+      const lastNightDate = new Date(finalDate.getTime() - 24 * 60 * 60 * 1000);
+
+      for (let date = new Date(currentDate); date <= lastNightDate; date.setDate(date.getDate() + 1)) {
         disabledDates.push(date.toISOString().split('T')[0]);
       }
     });
@@ -365,7 +379,9 @@ router.get("/prices", async (req, res) => {
     const normalizedStartDate = new Date(startDate + 'T00:00:00.000Z');
     const normalizedEndDate = new Date(endDate + 'T00:00:00.000Z');
 
-    const prices = await PriceRule.getPricesForPeriod(property, normalizedStartDate, normalizedEndDate);
+    // ✅ CORRECTION - Calculer le prix pour les nuits (du début jusqu'à la veille du départ)
+    const lastNightDate = new Date(normalizedEndDate.getTime() - 24 * 60 * 60 * 1000);
+    const prices = await PriceRule.getPricesForPeriod(property, normalizedStartDate, lastNightDate);
     
     // Calculer le prix total
     const totalPrice = Object.values(prices).reduce((sum, price) => sum + price, 0);

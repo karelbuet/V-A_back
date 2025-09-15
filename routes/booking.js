@@ -2,6 +2,7 @@ import express from "express";
 import nodemailer from "nodemailer";
 import Cart from "../models/cart.js";
 import Booking from "../models/booking.js";
+import GlobalSettings from "../models/globalSettings.js";
 import { authenticateToken, requireRole } from "../middleware/auth.js";
 import { rateLimitConfig } from "../middleware/security.js";
 import { EmailActionService } from "../services/emailActionService.js";
@@ -9,19 +10,49 @@ import { EmailService } from "../services/emailService.js";
 
 const router = express.Router();
 
+// ✅ Fonction utilitaire pour formater les dates de façon cohérente
+// Elle préserve la date logique stockée en UTC comme date de séjour
+function formatDateUTC(dateString) {
+  // Si la date est déjà au format ISO, on l'utilise directement
+  if (typeof dateString === 'string' && dateString.includes('T')) {
+    // Pour une date ISO comme "2025-09-22T00:00:00.000Z", on veut afficher 22/09/2025
+    const dateParts = dateString.split('T')[0].split('-'); // ["2025", "09", "22"]
+    return `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`; // "22/09/2025"
+  }
+
+  // Fallback pour les autres formats
+  const date = new Date(dateString);
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const year = date.getUTCFullYear();
+  return `${day}/${month}/${year}`;
+}
 
 // -------------------------
 // 1. CRÉER DEMANDE DE RÉSERVATION
 // -------------------------
 router.post("/create-request", authenticateToken, async (req, res) => {
   try {
-    const cart = await Cart.findOne({ userId: req.user.userId });
-    if (!cart || cart.items.length === 0) {
-      return res.status(400).json({ result: false, error: "Panier vide" });
+    console.log("🎯 [BOOKING] Début de la demande de réservation");
+    console.log("📋 [BOOKING] User ID:", req.user.userId);
+    console.log("📋 [BOOKING] Body reçu:", JSON.stringify(req.body, null, 2));
+
+    // ✅ CORRECTION - Utiliser les items envoyés par le frontend
+    const { items: cartItems, guestDetails } = req.body;
+
+    // Validation des données reçues
+    if (!cartItems || cartItems.length === 0) {
+      console.log("❌ [BOOKING] Erreur: Panier vide");
+      return res.status(400).json({ result: false, error: "Aucun article dans la demande de réservation" });
     }
 
+    console.log(`✅ [BOOKING] ${cartItems.length} articles trouvés dans le panier`);
+
     // ✅ CORRECTION - Vérifier les conflits avant de créer la réservation
-    for (const item of cart.items) {
+    console.log("🔍 [BOOKING] Vérification des conflits de dates...");
+    for (const item of cartItems) {
+      console.log(`🔍 [BOOKING] Vérification ${item.apartmentId} du ${item.startDate} au ${item.endDate}`);
+
       const conflictingBookings = await Booking.find({
         apartmentId: item.apartmentId,
         status: { $in: ["pending", "accepted", "confirmed"] },
@@ -30,41 +61,134 @@ router.post("/create-request", authenticateToken, async (req, res) => {
         ]
       });
 
+      console.log(`🔍 [BOOKING] Conflits trouvés pour ${item.apartmentId}:`, conflictingBookings.length);
+
       if (conflictingBookings.length > 0) {
+        console.log("❌ [BOOKING] Conflit détecté:", conflictingBookings);
         return res.status(400).json({
           result: false,
           error: `Dates non disponibles pour ${item.apartmentId}. Une réservation existe déjà sur cette période.`
         });
       }
     }
+    console.log("✅ [BOOKING] Aucun conflit de dates détecté");
 
-    // Créer un booking "en attente" pour chaque item
-    const bookings = await Booking.insertMany(
-      cart.items.map((item) => ({
+    // ✅ CORRECTION - Les détails invités sont déjà définis dans la destructuration
+    // Validation des détails invités avec valeurs par défaut
+    const validatedGuestDetails = {
+      adults: guestDetails?.adults || 1,
+      children: guestDetails?.children || [],
+      pets: guestDetails?.pets || [],
+      specialRequests: guestDetails?.specialRequests || "",
+      arrivalTime: guestDetails?.arrivalTime || "",
+      contactPhone: guestDetails?.contactPhone || "",
+      includeCleaning: guestDetails?.includeCleaning || false,
+      includeLinen: guestDetails?.includeLinen || false
+    };
+
+    // Récupérer les paramètres globaux pour les services
+    let cleaningFee = 0;
+    let linenFee = 0;
+
+    try {
+      const cleaningSetting = await GlobalSettings.findOne({ settingKey: "cleaning_fee" });
+      const linenSetting = await GlobalSettings.findOne({ settingKey: "linen_option_price" });
+
+      cleaningFee = cleaningSetting ? cleaningSetting.settingValue : 0;
+      linenFee = linenSetting ? linenSetting.settingValue : 0;
+    } catch (settingsError) {
+      console.error("Erreur récupération paramètres globaux:", settingsError);
+      // Continuer avec des frais à 0
+    }
+
+    console.log("💾 [BOOKING] Préparation de l'insertion en base...");
+    console.log("💾 [BOOKING] Détails invités validés:", validatedGuestDetails);
+
+    const bookingDocuments = cartItems.map((item) => {
+      // Calculer les services additionnels
+      const includeCleaning = validatedGuestDetails.includeCleaning;
+      const includeLinen = validatedGuestDetails.includeLinen;
+
+      const cleaningCost = includeCleaning ? cleaningFee : 0;
+      const linenCost = includeLinen ? linenFee : 0;
+      const totalPrice = item.price + cleaningCost + linenCost;
+
+      const bookingDoc = {
         userId: req.user.userId,
         apartmentId: item.apartmentId,
         startDate: item.startDate,
         endDate: item.endDate,
-        price: item.price,
+        price: item.price, // Prix de base du logement
+        totalPrice: totalPrice, // Prix total avec services
         status: "pending", // En attente validation hôte
         bookedAt: new Date(),
-      }))
-    );
+        guestDetails: {
+          adults: validatedGuestDetails.adults,
+          children: validatedGuestDetails.children,
+          pets: validatedGuestDetails.pets,
+          specialRequests: validatedGuestDetails.specialRequests,
+          arrivalTime: validatedGuestDetails.arrivalTime,
+          contactPhone: validatedGuestDetails.contactPhone
+        },
+        additionalServices: {
+          cleaning: {
+            included: includeCleaning,
+            price: cleaningCost
+          },
+          linen: {
+            included: includeLinen,
+            price: linenCost
+          }
+        }
+      };
+
+      console.log(`💾 [BOOKING] Document préparé pour ${item.apartmentId}:`, bookingDoc);
+      return bookingDoc;
+    });
+
+    console.log(`💾 [BOOKING] Insertion de ${bookingDocuments.length} réservations...`);
+    const bookings = await Booking.insertMany(bookingDocuments);
+    console.log(`✅ [BOOKING] ${bookings.length} réservations insérées avec succès!`);
 
     // Envoyer un email à l'hôte avec le nouveau système de templates
-    await EmailService.sendReservationEmail(bookings);
+    console.log("📧 [BOOKING] Envoi de l'email à l'hôte...");
+    try {
+      await EmailService.sendReservationEmail(bookings);
+      console.log("✅ [BOOKING] Email envoyé avec succès");
+    } catch (emailError) {
+      console.error("⚠️ [BOOKING] Erreur envoi email (non bloquant):", emailError);
+      // Ne pas bloquer la réservation si l'email échoue
+    }
 
-    // Vider le panier
-    await Cart.deleteOne({ _id: cart._id });
+    // ✅ CORRECTION - Optionnel: Vider le panier côté serveur si il existe
+    // (Le frontend se charge déjà de vider le panier côté client)
+    try {
+      const cartDeleteResult = await Cart.deleteOne({ userId: req.user.userId });
+      console.log("🗑️ [BOOKING] Suppression panier serveur:", cartDeleteResult);
+    } catch (cartError) {
+      console.log("ℹ️ [BOOKING] Info: Aucun panier côté serveur à supprimer");
+    }
+
+    console.log("🎉 [BOOKING] Réservation terminée avec succès!");
+    console.log("🎉 [BOOKING] IDs des réservations créées:", bookings.map(b => b._id));
 
     res.json({
       result: true,
-      message: "Demande envoyée à l’hôte",
-      bookings,
+      message: "Demande envoyée à l'hôte",
+      bookings: bookings.map(b => ({
+        _id: b._id,
+        apartmentId: b.apartmentId,
+        startDate: b.startDate,
+        endDate: b.endDate,
+        price: b.price,
+        totalPrice: b.totalPrice,
+        status: b.status
+      })),
     });
   } catch (err) {
-    console.error("Erreur create-request:", err);
-    res.status(500).json({ result: false, error: "Erreur serveur" });
+    console.error("❌ [BOOKING] ERREUR CRITIQUE create-request:", err);
+    console.error("❌ [BOOKING] Stack trace:", err.stack);
+    res.status(500).json({ result: false, error: "Erreur serveur lors de la création de la réservation" });
   }
 });
 
@@ -226,10 +350,69 @@ router.get("/searchBookings", authenticateToken, async (req, res) => {
 });
 
 // -------------------------
-// 5. ADMIN - LISTER TOUTES LES RÉSERVATIONS EN ATTENTE - AVEC PAGINATION
+// 5. ADMIN - LISTER TOUTES LES RÉSERVATIONS - AVEC PAGINATION
 // -------------------------
 router.get(
-  "/admin/pending", 
+  "/all",
+  authenticateToken,
+  requireRole(["admin"]),
+  async (req, res) => {
+    try {
+      // Paramètres de pagination
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 50;
+      const skip = (page - 1) * limit;
+
+      // Validation des paramètres
+      if (page < 1 || limit < 1 || limit > 100) {
+        return res.status(400).json({
+          result: false,
+          error: "Paramètres de pagination invalides (page >= 1, limit 1-100)"
+        });
+      }
+
+      // Requêtes parallèles pour performance
+      const [bookings, totalCount] = await Promise.all([
+        Booking.find({})
+          .populate("userId", "firstname lastname email phone")
+          .sort({ bookedAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        Booking.countDocuments({})
+      ]);
+
+      // Métadonnées de pagination
+      const totalPages = Math.ceil(totalCount / limit);
+      const hasNextPage = page < totalPages;
+      const hasPrevPage = page > 1;
+
+      res.json({
+        result: true,
+        bookings,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalItems: totalCount,
+          itemsPerPage: limit,
+          hasNextPage,
+          hasPrevPage,
+          nextPage: hasNextPage ? page + 1 : null,
+          prevPage: hasPrevPage ? page - 1 : null
+        }
+      });
+    } catch (err) {
+      console.error("Erreur admin all bookings:", err);
+      res.status(500).json({ result: false, error: "Erreur serveur" });
+    }
+  }
+);
+
+// -------------------------
+// 6. ADMIN - LISTER TOUTES LES RÉSERVATIONS EN ATTENTE - AVEC PAGINATION
+// -------------------------
+router.get(
+  "/admin/pending",
   authenticateToken,
   requireRole(["admin"]),
   async (req, res) => {
@@ -403,7 +586,7 @@ router.get(
             </div>
             <div class="detail-row">
               <span class="label">Période:</span> 
-              <span class="value">Du ${new Date(result.booking.startDate).toLocaleDateString('fr-FR')} au ${new Date(result.booking.endDate).toLocaleDateString('fr-FR')}</span>
+              <span class="value">Du ${formatDateUTC(result.booking.startDate)} au ${formatDateUTC(result.booking.endDate)}</span>
             </div>
             <div class="detail-row">
               <span class="label">Prix:</span> 
@@ -478,115 +661,10 @@ router.get(
 );
 
 // -------------------------
-// UTILITAIRE : ENVOI EMAIL
+// NOTE : ANCIEN SYSTÈME EMAIL REMPLACÉ
 // -------------------------
-async function sendReservationEmail(bookings) {
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
-
-  let htmlContent = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <div style="background: #1976d2; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-        <h1 style="margin: 0;">🏠 ImmoVA</h1>
-        <h2 style="margin: 10px 0 0 0;">Nouvelle${bookings.length > 1 ? 's' : ''} demande${bookings.length > 1 ? 's' : ''} de réservation</h2>
-      </div>
-      <div style="background: #f5f5f5; padding: 20px;">
-        <p style="color: #333; margin-bottom: 20px;">
-          Vous avez reçu <strong>${bookings.length} nouvelle${bookings.length > 1 ? 's' : ''} demande${bookings.length > 1 ? 's' : ''}</strong> de réservation.
-          Vous pouvez traiter chaque demande directement depuis cet email.
-        </p>
-      </div>
-  `;
-  // Traiter chaque réservation
-  for (const booking of bookings) {
-    try {
-      // Générer les tokens d'action pour cette réservation
-      const tokens = await EmailActionService.generateActionTokens(booking._id);
-      
-      const baseUrl = process.env.BACKEND_URL || 'http://localhost:3000';
-      const acceptUrl = `${baseUrl}/booking/email-action/${tokens.acceptToken}`;
-      const refuseUrl = `${baseUrl}/booking/email-action/${tokens.refuseToken}`;
-      
-      htmlContent += `
-        <div style="background: white; margin: 20px 0; padding: 20px; border-radius: 8px; border-left: 4px solid #1976d2;">
-          <h3 style="color: #1976d2; margin-top: 0;">📋 Réservation #${booking._id.toString().slice(-6)}</h3>
-          
-          <div style="background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 15px 0;">
-            <div style="margin-bottom: 10px;"><strong>🏡 Logement:</strong> ${booking.apartmentId}</div>
-            <div style="margin-bottom: 10px;"><strong>📅 Période:</strong> Du ${new Date(booking.startDate).toLocaleDateString('fr-FR')} au ${new Date(booking.endDate).toLocaleDateString('fr-FR')}</div>
-            <div style="margin-bottom: 10px;"><strong>💰 Prix:</strong> ${booking.price} €</div>
-            <div style="margin-bottom: 10px;"><strong>⏰ Demande reçue:</strong> ${new Date(booking.bookedAt).toLocaleString('fr-FR')}</div>
-          </div>
-
-          <div style="text-align: center; margin: 25px 0;">
-            <a href="${acceptUrl}" 
-               style="display: inline-block; padding: 12px 25px; margin: 0 10px; background: #4caf50; color: white; text-decoration: none; border-radius: 25px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-              ✅ ACCEPTER
-            </a>
-            <a href="${refuseUrl}" 
-               style="display: inline-block; padding: 12px 25px; margin: 0 10px; background: #f44336; color: white; text-decoration: none; border-radius: 25px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-              ❌ REFUSER
-            </a>
-          </div>
-
-          <div style="background: #e3f2fd; padding: 10px; border-radius: 4px; font-size: 12px; color: #1565c0;">
-            <strong>💡 Actions directes:</strong> Cliquez sur les boutons ci-dessus pour traiter cette réservation directement.
-            <br>Une page de confirmation s'ouvrira et le client sera automatiquement notifié de votre décision.
-            <br><strong>⏱️ Ces liens expirent dans 7 jours.</strong>
-          </div>
-
-          <div style="text-align: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
-            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/compte?tab=admin&action=review&booking=${booking._id}"
-               style="display: inline-block; padding: 8px 15px; background: #1976d2; color: white; text-decoration: none; border-radius: 4px; font-size: 12px;">
-              📋 Voir dans l'interface admin
-            </a>
-          </div>
-        </div>
-      `;
-    } catch (tokenError) {
-      console.error('Erreur génération tokens pour booking', booking._id, ':', tokenError);
-      // Fallback vers l'ancienne version si les tokens échouent
-      htmlContent += `
-        <div style="background: white; margin: 20px 0; padding: 20px; border-radius: 8px; border-left: 4px solid #ff9800;">
-          <h3 style="color: #ff9800; margin-top: 0;">⚠️ Réservation #${booking._id.toString().slice(-6)}</h3>
-          <p><strong>Logement:</strong> ${booking.apartmentId}</p>
-          <p><strong>Période:</strong> Du ${new Date(booking.startDate).toLocaleDateString('fr-FR')} au ${new Date(booking.endDate).toLocaleDateString('fr-FR')}</p>
-          <p><strong>Prix:</strong> ${booking.price} €</p>
-          <div style="text-align: center; margin: 15px 0;">
-            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/compte?tab=admin&action=review&booking=${booking._id}"
-               style="padding: 10px 20px; background: #1976d2; color: white; text-decoration: none; border-radius: 5px;">
-               📋 Examiner cette réservation
-            </a>
-          </div>
-          <p style="color: #ff9800; font-size: 12px;"><em>Actions rapides temporairement indisponibles - utilisez l'interface admin</em></p>
-        </div>
-      `;
-    }
-  }
-
-  htmlContent += `
-      <div style="background: #37474f; color: white; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; margin-top: 20px;">
-        <p style="margin: 0; font-size: 14px;">
-          <strong>🏠 ImmoVA</strong> - Système de réservation automatisé
-        </p>
-        <p style="margin: 10px 0 0 0; font-size: 12px; opacity: 0.8;">
-          Cet email a été généré automatiquement. Les actions directes sont sécurisées et auditées.
-        </p>
-      </div>
-    </div>
-  `;
-
-  await transporter.sendMail({
-    from: `"🏠 ImmoVA - Réservations" <${process.env.SMTP_USER}>`,
-    to: process.env.RECEIVER_EMAIL,
-    subject: `📨 Nouvelle demande de réservation - ${bookings.length} demande(s)`,
-    html: htmlContent,
-  });
-}
+// L'ancienne fonction sendReservationEmail a été remplacée par
+// EmailService.sendReservationEmail qui utilise le système de templates
+// modulaire dans services/emailService.js et services/emailTemplateService.js
 
 export default router;
