@@ -367,13 +367,18 @@ router.get("/prices", async (req, res) => {
     // Mappage des apartmentId vers les property names
     const propertyMap = {
       'valery-sources-baie': 'valery-sources-baie',
-      'touquet-pinede': 'touquet-pinede'
+      'touquet-pinede': 'touquet-pinede',
+      'St valery - Aux sources de la baie': 'valery-sources-baie',
+      'Le Touquet - La pinède au plein soleil': 'touquet-pinede'
     };
 
     const property = propertyMap[apartmentId];
     if (!property) {
+      console.log(`❌ Appartement non reconnu: "${apartmentId}". Mapping disponible:`, Object.keys(propertyMap));
       return res.json({ result: false, error: "Appartement non reconnu" });
     }
+
+    console.log(`✅ Mapping trouvé: "${apartmentId}" -> "${property}"`);
 
     // Normaliser les dates reçues en format ISO (YYYY-MM-DD)
     const normalizedStartDate = new Date(startDate + 'T00:00:00.000Z');

@@ -92,6 +92,8 @@ router.post('/', auth, async (req, res) => {
     }
     
     // Vérifier les conflits de dates pour les règles de période
+    console.log(`🔍 [PRICE RULE] Vérification conflits pour ${property} du ${startDate} au ${endDate}`);
+
     const conflictingRules = await PriceRule.find({
       property,
       isActive: true,
@@ -102,11 +104,24 @@ router.post('/', auth, async (req, res) => {
         }
       ]
     });
-    
+
+    console.log(`🔍 [PRICE RULE] Conflits trouvés: ${conflictingRules.length}`);
     if (conflictingRules.length > 0) {
-      return res.status(409).json({ 
+      console.log(`🔍 [PRICE RULE] Règles en conflit:`, conflictingRules.map(r => ({
+        name: r.name,
+        startDate: r.startDate,
+        endDate: r.endDate,
+        priority: r.priority
+      })));
+
+      return res.status(409).json({
         message: 'Conflit détecté avec une règle existante',
-        conflictingRules 
+        conflictingRules: conflictingRules.map(r => ({
+          name: r.name,
+          startDate: r.startDate,
+          endDate: r.endDate,
+          priority: r.priority
+        }))
       });
     }
     

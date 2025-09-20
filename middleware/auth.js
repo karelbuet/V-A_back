@@ -302,14 +302,24 @@ export const authenticateToken = async (req, res, next) => {
 // --- Role-Based Authorization Middleware ---
 export const requireRole = (roles = []) => {
   return (req, res, next) => {
+    console.log(`🔍 [ROLE CHECK] User:`, req.user ? {
+      userId: req.user.userId,
+      role: req.user.role,
+      email: req.user.email
+    } : 'undefined');
+    console.log(`🔍 [ROLE CHECK] Required roles:`, roles);
+
     if (!req.user) {
+      console.log(`❌ [ROLE CHECK] User not authenticated`);
       return res.status(401).json({ error: "Non authentifié" });
     }
 
     if (roles.length && !roles.includes(req.user.role)) {
+      console.log(`❌ [ROLE CHECK] Role "${req.user.role}" not in required roles [${roles.join(', ')}]`);
       return res.status(403).json({ error: "Permissions insuffisantes" });
     }
 
+    console.log(`✅ [ROLE CHECK] Access granted`);
     next();
   };
 };

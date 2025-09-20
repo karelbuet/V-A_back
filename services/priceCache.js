@@ -77,11 +77,17 @@ export class PriceCacheService {
         return targetDate >= start && targetDate <= end && rule.isActive;
       });
       
+      // Prix par défaut si aucune règle trouvée
+      const defaultPrices = {
+        "valery-sources-baie": 120,
+        "touquet-pinede": 150,
+      };
+
       const priceData = {
         date,
         property,
-        price: applicableRule ? applicableRule.pricePerNight : null,
-        ruleName: applicableRule ? applicableRule.name : null,
+        price: applicableRule ? applicableRule.pricePerNight : (defaultPrices[property] || 100),
+        ruleName: applicableRule ? applicableRule.name : 'Prix par défaut',
         ruleId: applicableRule ? applicableRule._id : null,
         hasRule: !!applicableRule,
         calculatedAt: new Date().toISOString()
