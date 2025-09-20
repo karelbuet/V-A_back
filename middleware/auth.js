@@ -35,6 +35,8 @@ const JWT_REFRESH_EXPIRES_IN = "7d";
 export class SecureAuthService {
   static async generateTokens(user) {
     try {
+      console.log('🔧 [TOKEN GEN] Starting token generation for user:', user._id);
+
       const payload = {
         userId: user._id,
         email: user.email,
@@ -42,11 +44,15 @@ export class SecureAuthService {
         iat: Math.floor(Date.now() / 1000),
       };
 
+      console.log('🔧 [TOKEN GEN] Payload created:', { userId: payload.userId, email: payload.email, role: payload.role });
+
       const accessToken = jwt.sign(payload, JWT_SECRET, {
         expiresIn: JWT_EXPIRES_IN,
         issuer: "immova-api",
         audience: "immova-client",
       });
+
+      console.log('🔧 [TOKEN GEN] Access token generated');
 
       const refreshToken = jwt.sign(
         { userId: user._id, type: "refresh" },
@@ -54,22 +60,28 @@ export class SecureAuthService {
         { expiresIn: JWT_REFRESH_EXPIRES_IN }
       );
 
+      console.log('🔧 [TOKEN GEN] Refresh token generated');
+
       // Supprimer les anciens refresh tokens de l'utilisateur
+      console.log('🔧 [TOKEN GEN] Deleting old refresh tokens...');
       await RefreshToken.deleteMany({ userId: user._id });
 
       // Stocker le nouveau refresh token en DB avec TTL
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7); // 7 jours
 
+      console.log('🔧 [TOKEN GEN] Creating new refresh token in DB...');
       await RefreshToken.create({
         userId: user._id,
         token: refreshToken,
         expiresAt,
       });
 
+      console.log('🔧 [TOKEN GEN] Token generation completed successfully');
       return { accessToken, refreshToken };
     } catch (error) {
-      throw new Error("Erreur lors de la génération des tokens");
+      console.error('❌ [TOKEN GEN] Error during token generation:', error);
+      throw new Error(`Erreur lors de la génération des tokens: ${error.message}`);
     }
   }
 
