@@ -42,14 +42,14 @@ router.get("/", authenticateToken, async (req, res) => {
 });
 
 // --- Add Item to Cart ---
-router.post("/addCart", authenticateToken, async (req, res) => {
+router.post("/add", authenticateToken, async (req, res) => {
   try {
     const { apartmentId, startDate, endDate, price } = req.body;
     if (!apartmentId || !startDate || !endDate || !price) {
       return res.status(400).json({ result: false, error: "Champs manquants" });
     }
 
-    // ✅ CORRECTION - Vérifier les conflits avant d'ajouter au panier
+    // ✅ CORRECTION - Vérifier les conflits en excluant les jours de départ/arrivée
     const itemStart = new Date(startDate);
     const itemEnd = new Date(endDate);
 
@@ -57,7 +57,11 @@ router.post("/addCart", authenticateToken, async (req, res) => {
       apartmentId,
       status: { $in: ["pending", "accepted", "confirmed"] },
       $or: [
-        { startDate: { $lte: itemEnd }, endDate: { $gte: itemStart } }
+        // Conflit réel : chevauchement SAUF si endDate existant = startDate nouveau (départ = arrivée OK)
+        {
+          startDate: { $lt: itemEnd }, // Début existant < fin nouveau (strictement)
+          endDate: { $gt: itemStart }  // Fin existant > début nouveau (strictement)
+        }
       ]
     });
 

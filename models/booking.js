@@ -49,14 +49,10 @@ const bookingSchema = new mongoose.Schema({
         type: String,
         trim: true
       },
-      breed: {
+      size: {
         type: String,
-        trim: true
-      },
-      weight: {
-        type: Number,
-        min: 0,
-        max: 100
+        trim: true,
+        enum: ["petit", "moyen", "grand"]
       }
     }],
     specialRequests: {
@@ -69,6 +65,10 @@ const bookingSchema = new mongoose.Schema({
       trim: true
     },
     contactPhone: {
+      type: String,
+      trim: true
+    },
+    reason: {
       type: String,
       trim: true
     }

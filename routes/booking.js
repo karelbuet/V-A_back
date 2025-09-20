@@ -57,7 +57,11 @@ router.post("/create-request", authenticateToken, async (req, res) => {
         apartmentId: item.apartmentId,
         status: { $in: ["pending", "accepted", "confirmed"] },
         $or: [
-          { startDate: { $lte: item.endDate }, endDate: { $gte: item.startDate } }
+          // Conflit réel : chevauchement SAUF si endDate existant = startDate nouveau (départ = arrivée OK)
+          {
+            startDate: { $lt: item.endDate }, // Début existant < fin nouveau (strictement)
+            endDate: { $gt: item.startDate }  // Fin existant > début nouveau (strictement)
+          }
         ]
       });
 
@@ -83,22 +87,49 @@ router.post("/create-request", authenticateToken, async (req, res) => {
       arrivalTime: guestDetails?.arrivalTime || "",
       contactPhone: guestDetails?.contactPhone || "",
       includeCleaning: guestDetails?.includeCleaning || false,
-      includeLinen: guestDetails?.includeLinen || false
+      includeLinen: guestDetails?.includeLinen || false,
+      reason: guestDetails?.reason || ""
     };
 
-    // Récupérer les paramètres globaux pour les services
+    // Récupérer les paramètres spécifiques à la propriété pour les services
     let cleaningFee = 0;
     let linenFee = 0;
 
     try {
-      const cleaningSetting = await GlobalSettings.findOne({ settingKey: "cleaning_fee" });
-      const linenSetting = await GlobalSettings.findOne({ settingKey: "linen_option_price" });
+      // Déterminer la propriété depuis le premier item
+      const firstItem = cartItems[0];
+      let propertyName = "valery"; // par défaut
 
-      cleaningFee = cleaningSetting ? cleaningSetting.settingValue : 0;
-      linenFee = linenSetting ? linenSetting.settingValue : 25; // Prix par défaut 25€
+      if (firstItem && firstItem.apartmentId) {
+        if (firstItem.apartmentId.includes("touquet") || firstItem.apartmentId.includes("pinede")) {
+          propertyName = "touquet";
+        } else {
+          propertyName = "valery";
+        }
+      }
+
+      console.log("🔧 [BOOKING] Récupération paramètres pour propriété:", propertyName);
+
+      // Récupération des paramètres spécifiques à la propriété
+      const propertySettings = await GlobalSettings.findOne({
+        settingKey: `${propertyName}_settings`
+      });
+
+      if (propertySettings && propertySettings.settingValue) {
+        const settings = propertySettings.settingValue;
+        cleaningFee = settings.cleaning_fee || 0;
+        linenFee = settings.linen_option_price || 0;
+        console.log("🔧 [BOOKING] Paramètres trouvés:", { cleaningFee, linenFee });
+      } else {
+        console.log("🔧 [BOOKING] Paramètres non trouvés, utilisation valeurs par défaut");
+        cleaningFee = 50;
+        linenFee = 50;
+      }
     } catch (settingsError) {
-      console.error("Erreur récupération paramètres globaux:", settingsError);
-      // Continuer avec des frais à 0
+      console.error("Erreur récupération paramètres propriété:", settingsError);
+      // Valeurs par défaut
+      cleaningFee = 50;
+      linenFee = 50;
     }
 
     console.log("💾 [BOOKING] Préparation de l'insertion en base...");
@@ -106,10 +137,10 @@ router.post("/create-request", authenticateToken, async (req, res) => {
 
     const bookingDocuments = cartItems.map((item) => {
       // Calculer les services additionnels
-      const includeCleaning = validatedGuestDetails.includeCleaning;
+      const includeCleaning = true; // Toujours inclus
       const includeLinen = validatedGuestDetails.includeLinen;
 
-      const cleaningCost = includeCleaning ? cleaningFee : 0;
+      const cleaningCost = cleaningFee; // Toujours inclus
       const linenCost = includeLinen ? linenFee : 0;
       const totalPrice = item.price + cleaningCost + linenCost;
 
@@ -128,7 +159,8 @@ router.post("/create-request", authenticateToken, async (req, res) => {
           pets: validatedGuestDetails.pets,
           specialRequests: validatedGuestDetails.specialRequests,
           arrivalTime: validatedGuestDetails.arrivalTime,
-          contactPhone: validatedGuestDetails.contactPhone
+          contactPhone: validatedGuestDetails.contactPhone,
+          reason: validatedGuestDetails.reason
         },
         additionalServices: {
           cleaning: {

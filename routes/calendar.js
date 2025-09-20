@@ -187,12 +187,12 @@ router.delete("/unblockPeriod/:id", authenticateToken, async (req, res) => {
 router.get("/blockedDates", authenticateToken, async (req, res) => {
   const { apartmentId } = req.query;
 
-  if (!apartmentId) {
-    return res.json({ result: false, error: "apartmentId requis" });
-  }
-
   try {
-    const blockedDates = await BlockedDate.find({ apartmentId }).sort({
+    // Si apartmentId fourni, récupérer pour cet appartement spécifiquement
+    // Sinon, récupérer TOUTES les dates bloquées (pour calendrier admin)
+    const query = apartmentId ? { apartmentId } : {};
+
+    const blockedDates = await BlockedDate.find(query).sort({
       startDate: 1,
     }); // Trier par date de début croissante
 
@@ -428,6 +428,116 @@ router.get("/price/:apartmentId/:date", async (req, res) => {
     });
   } catch (err) {
     console.error("❌ Erreur récupération prix:", err);
+    res.json({ result: false, error: err.message });
+  }
+});
+
+// 👉 Route spécifique pour le calendrier admin - Affichage complet des périodes
+router.get("/adminCalendarData", authenticateToken, async (req, res) => {
+  const { apartmentId } = req.query;
+
+  if (!apartmentId) {
+    return res.json({ result: false, error: "apartmentId requis" });
+  }
+
+  try {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    // Requêtes parallèles pour récupérer toutes les données
+    const [blockedDates, bookings] = await Promise.all([
+      BlockedDate.find({
+        apartmentId,
+        endDate: { $gte: now }
+      })
+      .select('startDate endDate reason')
+      .sort({ startDate: 1 })
+      .lean(),
+
+      Booking.find({
+        apartmentId,
+        status: { $in: ["pending", "accepted", "confirmed"] },
+        endDate: { $gte: now }
+      })
+      .select('startDate endDate status')
+      .sort({ startDate: 1 })
+      .lean()
+    ]);
+
+    // Générer les données pour l'affichage admin
+    const adminCalendarData = [];
+    const allDates = new Map(); // Map: date -> array des périodes qui l'occupent
+    const overlapDates = new Set(); // Dates avec chevauchement
+
+    // Combiner toutes les périodes pour traitement
+    const allPeriods = [
+      ...blockedDates.map(p => ({ ...p, type: 'blocked', color: 'red' })),
+      ...bookings.map(b => ({
+        ...b,
+        type: 'booking',
+        color: b.status === 'pending' ? 'orange' : b.status === 'confirmed' ? 'green' : 'blue'
+      }))
+    ];
+
+    // Traiter chaque période et générer les dates
+    allPeriods.forEach((period, index) => {
+      const start = new Date(period.startDate);
+      const end = new Date(period.endDate);
+
+      const startDateStr = start.toISOString().split('T')[0];
+      const endDateStr = end.toISOString().split('T')[0];
+
+      // Pour l'admin, on affiche TOUTE la période y compris le jour de fin
+      const currentDate = new Date(startDateStr + 'T00:00:00.000Z');
+      const finalDate = new Date(endDateStr + 'T00:00:00.000Z');
+
+      const periodDates = [];
+      for (let date = new Date(currentDate); date <= finalDate; date.setDate(date.getDate() + 1)) {
+        const dateStr = date.toISOString().split('T')[0];
+        periodDates.push(dateStr);
+
+        // Enregistrer cette date comme occupée par cette période
+        if (!allDates.has(dateStr)) {
+          allDates.set(dateStr, []);
+        }
+        allDates.get(dateStr).push(index);
+
+        // Si cette date est déjà occupée par une autre période = chevauchement
+        if (allDates.get(dateStr).length > 1) {
+          overlapDates.add(dateStr);
+        }
+      }
+
+      const periodData = {
+        type: period.type,
+        startDate: startDateStr,
+        endDate: endDateStr,
+        dates: periodDates,
+        color: period.color
+      };
+
+      if (period.type === 'blocked') {
+        periodData.reason = period.reason;
+      } else {
+        periodData.status = period.status;
+      }
+
+      adminCalendarData.push(periodData);
+    });
+
+    res.json({
+      result: true,
+      periods: adminCalendarData,
+      overlapDates: [...overlapDates],
+      summary: {
+        totalBlocked: blockedDates.length,
+        totalBookings: bookings.length,
+        totalOccupiedDates: allDates.size,
+        overlapCount: overlapDates.size
+      }
+    });
+  } catch (err) {
+    console.error("❌ Erreur adminCalendarData:", err);
     res.json({ result: false, error: err.message });
   }
 });

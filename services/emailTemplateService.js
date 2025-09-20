@@ -121,7 +121,7 @@ export class EmailTemplateService {
                   booking.guestDetails.pets
                     .map(
                       (p) =>
-                        `<div class="pet-detail">• ${p.type} (${p.breed}, ${p.weight}kg)</div>`
+                        `<div class="pet-detail">• ${p.type}${p.size ? ` (taille: ${p.size})` : ""}</div>`
                     )
                     .join("")
                 : "",
@@ -129,6 +129,11 @@ export class EmailTemplateService {
             // Contact téléphone conditionnel
             CONTACT_PHONE_ROW: booking.guestDetails?.contactPhone
               ? `<div class="detail-row"><span class="detail-label">📞 Téléphone: </span><span class="detail-value">${booking.guestDetails.contactPhone}</span></div>`
+              : "",
+
+            // Raison de la réservation conditionnelle
+            REASON_ROW: booking.guestDetails?.reason
+              ? `<div class="detail-row"><span class="detail-label">🎯 Motif: </span><span class="detail-value">${booking.guestDetails.reason}</span></div>`
               : "",
 
             // Message conditionnel
@@ -194,7 +199,7 @@ export class EmailTemplateService {
                   booking.guestDetails.pets
                     .map(
                       (p) =>
-                        `<div class="pet-detail">• ${p.type} (${p.breed}, ${p.weight}kg)</div>`
+                        `<div class="pet-detail">• ${p.type}${p.size ? ` (taille: ${p.size})` : ""}</div>`
                     )
                     .join("")
                 : "",
@@ -202,6 +207,11 @@ export class EmailTemplateService {
             // Contact téléphone conditionnel
             CONTACT_PHONE_ROW: booking.guestDetails?.contactPhone
               ? `<div class="detail-row"><span class="detail-label">📞 Téléphone: </span><span class="detail-value">${booking.guestDetails.contactPhone}</span></div>`
+              : "",
+
+            // Raison de la réservation conditionnelle
+            REASON_ROW: booking.guestDetails?.reason
+              ? `<div class="detail-row"><span class="detail-label">🎯 Motif: </span><span class="detail-value">${booking.guestDetails.reason}</span></div>`
               : "",
 
             // Message conditionnel
