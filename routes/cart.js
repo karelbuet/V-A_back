@@ -288,7 +288,7 @@ router.get("/capture-paypal-order", authenticateToken, async (req, res) => {
       const clientUser = await User.findById(req.user.userId);
 
       if (clientUser && clientUser.email) {
-        const transporter = nodemailer.createTransporter({
+        const transporter = nodemailer.createTransport({
           host: process.env.SMTP_HOST || "smtp.gmail.com",
           port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 465,
           secure: true,
@@ -328,7 +328,7 @@ router.get("/capture-paypal-order", authenticateToken, async (req, res) => {
         // Fallback avec l'email PayPal si disponible
         if (payerEmail) {
           console.log(`🔄 Tentative avec l'email PayPal: ${payerEmail}`);
-          const transporter = nodemailer.createTransporter({
+          const transporter = nodemailer.createTransport({
             host: process.env.SMTP_HOST || "smtp.gmail.com",
             port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 465,
             secure: true,
@@ -359,7 +359,7 @@ router.get("/capture-paypal-order", authenticateToken, async (req, res) => {
     }
 
     // Email admin
-    const adminTransporter = nodemailer.createTransporter({
+    const adminTransporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || "smtp.gmail.com",
       port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 465,
       secure: true,
