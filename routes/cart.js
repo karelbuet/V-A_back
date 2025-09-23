@@ -281,6 +281,9 @@ router.get("/capture-paypal-order", authenticateToken, async (req, res) => {
         .json({ success: false, error: "Réservation non trouvée pour ce paiement" });
     }
 
+    // Récupérer le montant réellement payé depuis PayPal
+    const paidAmount = data.purchase_units?.[0]?.payments?.captures?.[0]?.amount?.value || updatedBooking.totalPrice || updatedBooking.price;
+
     // ✅ CORRECTION - Email confirmation client depuis notre BD utilisateur
     try {
       // Récupérer l'email de l'utilisateur depuis notre base de données
@@ -304,14 +307,14 @@ router.get("/capture-paypal-order", authenticateToken, async (req, res) => {
           subject: "✅ Confirmation de paiement - Réservation confirmée",
           html: `
             <h2>Bonjour ${clientUser.firstname} ${clientUser.lastname},</h2>
-            <p>Votre paiement de <strong>${updatedBooking.price} €</strong> a bien été reçu ✅.</p>
+            <p>Votre paiement de <strong>${paidAmount} €</strong> a bien été reçu ✅.</p>
             <p><strong>Votre réservation est maintenant confirmée !</strong></p>
             <hr style="margin: 20px 0;">
             <p><strong>📋 Détails de votre réservation :</strong></p>
             <p>• Numéro : <strong>${updatedBooking._id}</strong></p>
             <p>• Logement : <strong>${updatedBooking.apartmentId}</strong></p>
             <p>• Période : Du ${new Date(updatedBooking.startDate).toLocaleDateString()} au ${new Date(updatedBooking.endDate).toLocaleDateString()}</p>
-            <p>• Montant payé : <strong>${updatedBooking.price} €</strong></p>
+            <p>• Montant payé : <strong>${paidAmount} €</strong></p>
             <hr style="margin: 20px 0;">
             <p>💡 <strong>Informations importantes :</strong></p>
             <p>• Vous recevrez les informations d'accès quelques jours avant votre arrivée</p>
@@ -344,7 +347,7 @@ router.get("/capture-paypal-order", authenticateToken, async (req, res) => {
             subject: "✅ Confirmation de paiement",
             html: `
               <h2>Bonjour,</h2>
-              <p>Votre paiement de <strong>${updatedBooking.price} €</strong> a bien été reçu ✅.</p>
+              <p>Votre paiement de <strong>${paidAmount} €</strong> a bien été reçu ✅.</p>
               <p>Numéro de réservation : <strong>${updatedBooking._id}</strong></p>
               <p>Appartement : ${updatedBooking.apartmentId}</p>
               <p>Du ${new Date(updatedBooking.startDate).toLocaleDateString()} au ${new Date(updatedBooking.endDate).toLocaleDateString()}</p>
@@ -376,7 +379,7 @@ router.get("/capture-paypal-order", authenticateToken, async (req, res) => {
       html: `
         <h2>Nouvelle réservation confirmée 🎉</h2>
         <p>Client : ${payerEmail}</p>
-        <p>Montant payé : <strong>${updatedBooking.price} €</strong></p>
+        <p>Montant payé : <strong>${paidAmount} €</strong></p>
         <p>Réservation : ${updatedBooking._id}</p>
         <p>Appartement : ${updatedBooking.apartmentId}</p>
         <p>Période : ${new Date(updatedBooking.startDate).toLocaleDateString()} - ${new Date(updatedBooking.endDate).toLocaleDateString()}</p>
@@ -401,7 +404,8 @@ router.get("/capture-paypal-order", authenticateToken, async (req, res) => {
         });
 
         // Déterminer si c'est un paiement partiel ou complet
-        const isPartialPayment = updatedBooking.totalPrice > updatedBooking.price;
+        const totalPrice = updatedBooking.totalPrice || updatedBooking.price;
+        const isPartialPayment = parseFloat(paidAmount) < parseFloat(totalPrice);
         const paymentType = isPartialPayment ? "ACCOMPTE" : "PAIEMENT COMPLET";
 
         await thirdPartyTransporter.sendMail({
@@ -437,8 +441,8 @@ router.get("/capture-paypal-order", authenticateToken, async (req, res) => {
 
             <h3>💰 Paiement :</h3>
             <p><strong>Type :</strong> <span style="color: ${isPartialPayment ? 'orange' : 'green'}; font-weight: bold;">${paymentType}</span></p>
-            <p><strong>Montant payé :</strong> ${updatedBooking.price} €</p>
-            ${isPartialPayment ? `<p><strong>Montant total :</strong> ${updatedBooking.totalPrice} €</p>` : ''}
+            <p><strong>Montant payé :</strong> ${paidAmount} €</p>
+            ${isPartialPayment ? `<p><strong>Montant total :</strong> ${totalPrice} €</p>` : ''}
 
             <hr>
 
