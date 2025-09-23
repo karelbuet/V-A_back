@@ -91,58 +91,63 @@ router.post("/create-request", authenticateToken, async (req, res) => {
       reason: guestDetails?.reason || ""
     };
 
-    // Récupérer les paramètres spécifiques à la propriété pour les services
-    let cleaningFee = 0;
-    let linenFee = 0;
-
-    try {
-      // Déterminer la propriété depuis le premier item
-      const firstItem = cartItems[0];
-      let propertyName = "valery"; // par défaut
-
-      if (firstItem && firstItem.apartmentId) {
-        if (firstItem.apartmentId.includes("touquet") || firstItem.apartmentId.includes("pinede")) {
-          propertyName = "touquet";
-        } else {
-          propertyName = "valery";
-        }
-      }
-
-      console.log("🔧 [BOOKING] Récupération paramètres pour propriété:", propertyName);
-
-      // Récupération des paramètres spécifiques à la propriété
-      const propertySettings = await GlobalSettings.findOne({
-        settingKey: `${propertyName}_settings`
-      });
-
-      if (propertySettings && propertySettings.settingValue) {
-        const settings = propertySettings.settingValue;
-        cleaningFee = settings.cleaning_fee || 0;
-        linenFee = settings.linen_option_price || 0;
-        console.log("🔧 [BOOKING] Paramètres trouvés:", { cleaningFee, linenFee });
-      } else {
-        console.log("🔧 [BOOKING] Paramètres non trouvés, utilisation valeurs par défaut");
-        cleaningFee = 50;
-        linenFee = 50;
-      }
-    } catch (settingsError) {
-      console.error("Erreur récupération paramètres propriété:", settingsError);
-      // Valeurs par défaut
-      cleaningFee = 50;
-      linenFee = 50;
-    }
-
     console.log("💾 [BOOKING] Préparation de l'insertion en base...");
     console.log("💾 [BOOKING] Détails invités validés:", validatedGuestDetails);
 
-    const bookingDocuments = cartItems.map((item) => {
-      // Calculer les services additionnels
+    // ✅ CORRECTION - Fonction utilitaire pour récupérer les paramètres par propriété
+    const getPropertySettings = async (apartmentId) => {
+      let propertyName = "valery"; // par défaut
+
+      if (apartmentId) {
+        const lowerApartmentId = apartmentId.toLowerCase();
+
+        // ✅ CORRECTION - Amélioration de la détection Touquet
+        if (lowerApartmentId.includes("touquet") ||
+            lowerApartmentId.includes("pinede") ||
+            lowerApartmentId.includes("pinède") ||
+            lowerApartmentId.includes("le touquet")) {
+          propertyName = "touquet";
+        }
+      }
+
+      try {
+        console.log("🔧 [BOOKING] Récupération paramètres pour propriété:", propertyName, "apartment:", apartmentId);
+
+        // ✅ CORRECTION - Récupérer les bonnes clés séparées
+        const cleaningKey = `cleaning_fee_${propertyName}`;
+        const linenKey = `linen_option_price_${propertyName}`;
+
+        // Récupérer les paramètres individuellement
+        const [cleaningSetting, linenSetting] = await Promise.all([
+          GlobalSettings.findOne({ settingKey: cleaningKey }),
+          GlobalSettings.findOne({ settingKey: linenKey })
+        ]);
+
+        const cleaningFee = cleaningSetting?.settingValue || 50;
+        const linenFee = linenSetting?.settingValue || 50;
+
+        console.log("🔧 [BOOKING] Paramètres trouvés pour", propertyName, ":", { cleaningFee, linenFee });
+        return { cleaningFee, linenFee, propertyName };
+      } catch (settingsError) {
+        console.error("Erreur récupération paramètres propriété:", settingsError);
+        return { cleaningFee: 50, linenFee: 50, propertyName };
+      }
+    };
+
+    // ✅ CORRECTION - Calculer les frais pour chaque item individuellement
+    const bookingDocuments = await Promise.all(cartItems.map(async (item) => {
+      // Récupérer les paramètres spécifiques à cette propriété
+      const { cleaningFee, linenFee, propertyName } = await getPropertySettings(item.apartmentId);
+
+      // Calculer les services additionnels pour cet item spécifique
       const includeCleaning = true; // Toujours inclus
       const includeLinen = validatedGuestDetails.includeLinen;
 
       const cleaningCost = cleaningFee; // Toujours inclus
       const linenCost = includeLinen ? linenFee : 0;
       const totalPrice = item.price + cleaningCost + linenCost;
+
+      console.log(`🔧 [BOOKING] Item ${item.apartmentId} (${propertyName}): prix=${item.price}, ménage=${cleaningCost}, linge=${linenCost}, total=${totalPrice}`);
 
       const bookingDoc = {
         userId: req.user.userId,
@@ -176,7 +181,7 @@ router.post("/create-request", authenticateToken, async (req, res) => {
 
       console.log(`💾 [BOOKING] Document préparé pour ${item.apartmentId}:`, bookingDoc);
       return bookingDoc;
-    });
+    }));
 
     console.log(`💾 [BOOKING] Insertion de ${bookingDocuments.length} réservations...`);
     const bookings = await Booking.insertMany(bookingDocuments);

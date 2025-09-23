@@ -29,6 +29,52 @@ router.get("/", async (req, res) => {
   }
 });
 
+// ✅ NOUVELLE ROUTE - Récupérer les frais par propriété (pour panier)
+router.get("/fees/:property", async (req, res) => {
+  try {
+    const { property } = req.params;
+
+    // Valider la propriété
+    if (!['valery', 'touquet'].includes(property)) {
+      return res.status(400).json({
+        result: false,
+        error: "Propriété invalide. Utilisez 'valery' ou 'touquet'"
+      });
+    }
+
+    // ✅ CORRECTION - Récupérer les bonnes clés séparées
+    const cleaningKey = `cleaning_fee_${property}`;
+    const linenKey = `linen_option_price_${property}`;
+
+    // Récupérer les paramètres individuellement
+    const [cleaningSetting, linenSetting] = await Promise.all([
+      GlobalSettings.findOne({ settingKey: cleaningKey }),
+      GlobalSettings.findOne({ settingKey: linenKey })
+    ]);
+
+    const cleaningFee = cleaningSetting?.settingValue || 50;
+    const linenFee = linenSetting?.settingValue || 50;
+
+    console.log(`🔧 [FEES] ${property}: cleaning=${cleaningFee}, linen=${linenFee}`);
+
+    res.json({
+      result: true,
+      property,
+      fees: {
+        cleaning: cleaningFee,
+        linen: linenFee
+      }
+    });
+
+  } catch (error) {
+    console.error("Erreur récupération frais propriété:", error);
+    res.status(500).json({
+      result: false,
+      error: "Erreur récupération frais"
+    });
+  }
+});
+
 // ✅ CRÉER/MODIFIER - Paramètre global (admin only)
 router.post("/", authenticateToken, requireRole(["admin"]), async (req, res) => {
   try {
