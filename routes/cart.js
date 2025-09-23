@@ -281,8 +281,85 @@ router.get("/capture-paypal-order", authenticateToken, async (req, res) => {
         .json({ success: false, error: "Réservation non trouvée pour ce paiement" });
     }
 
-    // email confirmation client
-    const transporter = nodemailer.createTransport({
+    // ✅ CORRECTION - Email confirmation client depuis notre BD utilisateur
+    try {
+      // Récupérer l'email de l'utilisateur depuis notre base de données
+      const User = (await import("../models/users.js")).default;
+      const clientUser = await User.findById(req.user.userId);
+
+      if (clientUser && clientUser.email) {
+        const transporter = nodemailer.createTransporter({
+          host: process.env.SMTP_HOST || "smtp.gmail.com",
+          port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 465,
+          secure: true,
+          auth: {
+            user: process.env.RECEIVER_EMAIL,
+            pass: process.env.SMTP_PASS,
+          },
+        });
+
+        await transporter.sendMail({
+          from: `"🏠 ImmoVA - Paiement" <${process.env.RECEIVER_EMAIL}>`,
+          to: clientUser.email,
+          subject: "✅ Confirmation de paiement - Réservation confirmée",
+          html: `
+            <h2>Bonjour ${clientUser.firstname} ${clientUser.lastname},</h2>
+            <p>Votre paiement de <strong>${updatedBooking.price} €</strong> a bien été reçu ✅.</p>
+            <p><strong>Votre réservation est maintenant confirmée !</strong></p>
+            <hr style="margin: 20px 0;">
+            <p><strong>📋 Détails de votre réservation :</strong></p>
+            <p>• Numéro : <strong>${updatedBooking._id}</strong></p>
+            <p>• Logement : <strong>${updatedBooking.apartmentId}</strong></p>
+            <p>• Période : Du ${new Date(updatedBooking.startDate).toLocaleDateString()} au ${new Date(updatedBooking.endDate).toLocaleDateString()}</p>
+            <p>• Montant payé : <strong>${updatedBooking.price} €</strong></p>
+            <hr style="margin: 20px 0;">
+            <p>💡 <strong>Informations importantes :</strong></p>
+            <p>• Vous recevrez les informations d'accès quelques jours avant votre arrivée</p>
+            <p>• Pour toute question, n'hésitez pas à nous contacter</p>
+            <br>
+            <p>Merci de votre confiance ! 🏠</p>
+            <p><em>L'équipe ImmoVA</em></p>
+          `,
+        });
+
+        console.log(`✅ Email de confirmation de paiement envoyé au client: ${clientUser.email}`);
+      } else {
+        console.log(`⚠️ Impossible d'envoyer l'email de confirmation : utilisateur ou email introuvable`);
+        // Fallback avec l'email PayPal si disponible
+        if (payerEmail) {
+          console.log(`🔄 Tentative avec l'email PayPal: ${payerEmail}`);
+          const transporter = nodemailer.createTransporter({
+            host: process.env.SMTP_HOST || "smtp.gmail.com",
+            port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 465,
+            secure: true,
+            auth: {
+              user: process.env.RECEIVER_EMAIL,
+              pass: process.env.SMTP_PASS,
+            },
+          });
+
+          await transporter.sendMail({
+            from: `"🏠 ImmoVA - Paiement" <${process.env.RECEIVER_EMAIL}>`,
+            to: payerEmail,
+            subject: "✅ Confirmation de paiement",
+            html: `
+              <h2>Bonjour,</h2>
+              <p>Votre paiement de <strong>${updatedBooking.price} €</strong> a bien été reçu ✅.</p>
+              <p>Numéro de réservation : <strong>${updatedBooking._id}</strong></p>
+              <p>Appartement : ${updatedBooking.apartmentId}</p>
+              <p>Du ${new Date(updatedBooking.startDate).toLocaleDateString()} au ${new Date(updatedBooking.endDate).toLocaleDateString()}</p>
+              <p>Merci de votre confiance.</p>
+            `,
+          });
+          console.log(`✅ Email de confirmation envoyé via PayPal email: ${payerEmail}`);
+        }
+      }
+    } catch (emailError) {
+      console.error("⚠️ Erreur envoi email confirmation client (non bloquant):", emailError);
+    }
+
+    // Email admin
+    const adminTransporter = nodemailer.createTransporter({
       host: process.env.SMTP_HOST || "smtp.gmail.com",
       port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 465,
       secure: true,
@@ -292,22 +369,7 @@ router.get("/capture-paypal-order", authenticateToken, async (req, res) => {
       },
     });
 
-    await transporter.sendMail({
-      from: `"VILEAU" <${process.env.RECEIVER_EMAIL}>`,
-      to: payerEmail,
-      subject: "Confirmation de réservation",
-      html: `
-        <h2>Bonjour,</h2>
-        <p>Votre paiement de <strong>${updatedBooking.price} €</strong> a bien été reçu ✅.</p>
-        <p>Numéro de réservation : <strong>${updatedBooking._id}</strong></p>
-        <p>Appartement : ${updatedBooking.apartmentId}</p>
-        <p>Du ${new Date(updatedBooking.startDate).toLocaleDateString()} au ${new Date(updatedBooking.endDate).toLocaleDateString()}</p>
-        <p>Merci de votre confiance.</p>
-      `,
-    });
-
-    // Email admin
-    await transporter.sendMail({
+    await adminTransporter.sendMail({
       from: `"VILEAU" <${process.env.RECEIVER_EMAIL}>`,
       to: process.env.RECEIVER_EMAIL,
       subject: "Nouvelle réservation payée",
