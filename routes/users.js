@@ -93,6 +93,7 @@ router.post("/register", async (req, res) => {
       secure: isProd, // ✅ HTTPS uniquement en production
       sameSite: isProd ? false : "lax", // ✅ CROSS-DOMAIN : false (pas de sameSite) en production
       path: "/", // ✅ Cookie disponible sur tout le site
+      ...(isProd && { partitioned: true }), // 🔮 FUTURE : Support cookies partitionnés
     };
 
     res.cookie("accessToken", accessToken, {
@@ -159,6 +160,7 @@ router.post("/login", rateLimitConfig.login, async (req, res) => {
       secure: isProd, // HTTPS en production
       sameSite: isProd ? false : "lax", // ✅ CROSS-DOMAIN : false (pas de sameSite) en production
       path: "/",
+      ...(isProd && { partitioned: true }), // 🔮 FUTURE : Support cookies partitionnés
     };
 
     res.cookie("accessToken", accessToken, {
