@@ -383,6 +383,85 @@ router.get("/capture-paypal-order", authenticateToken, async (req, res) => {
       `,
     });
 
+    // ✅ NOUVEAU - Email à la personne tiers (préparation logements)
+    if (process.env.THIRD_PARTY_EMAIL) {
+      try {
+        // Récupérer les infos client pour l'email tiers
+        const User = (await import("../models/users.js")).default;
+        const clientUser = await User.findById(req.user.userId);
+
+        const thirdPartyTransporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST || "smtp.gmail.com",
+          port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 465,
+          secure: true,
+          auth: {
+            user: process.env.RECEIVER_EMAIL,
+            pass: process.env.SMTP_PASS,
+          },
+        });
+
+        // Déterminer si c'est un paiement partiel ou complet
+        const isPartialPayment = updatedBooking.totalPrice > updatedBooking.price;
+        const paymentType = isPartialPayment ? "ACCOMPTE" : "PAIEMENT COMPLET";
+
+        await thirdPartyTransporter.sendMail({
+          from: `"🏠 ImmoVA - Préparation" <${process.env.RECEIVER_EMAIL}>`,
+          to: process.env.THIRD_PARTY_EMAIL,
+          subject: `🔔 Nouvelle arrivée à préparer - ${updatedBooking.apartmentId}`,
+          html: `
+            <h2>🏠 Nouvelle réservation confirmée - Préparation requise</h2>
+            <hr>
+
+            <h3>📋 Informations logement :</h3>
+            <p><strong>Logement :</strong> ${updatedBooking.apartmentId}</p>
+            <p><strong>Arrivée :</strong> ${new Date(updatedBooking.startDate).toLocaleDateString("fr-FR")}</p>
+            <p><strong>Départ :</strong> ${new Date(updatedBooking.endDate).toLocaleDateString("fr-FR")}</p>
+            <p><strong>Réservation :</strong> #${updatedBooking._id}</p>
+
+            <hr>
+
+            <h3>👥 Informations client :</h3>
+            <p><strong>Nom :</strong> ${clientUser?.lastname || 'N/C'} ${clientUser?.firstname || 'N/C'}</p>
+            <p><strong>Email :</strong> ${clientUser?.email || payerEmail || 'N/C'}</p>
+            <p><strong>Téléphone :</strong> ${updatedBooking.guestDetails?.contactPhone || clientUser?.phone || 'N/C'}</p>
+
+            <hr>
+
+            <h3>🎫 Détails séjour :</h3>
+            <p><strong>Adultes :</strong> ${updatedBooking.guestDetails?.adults || 1}</p>
+            <p><strong>Enfants :</strong> ${updatedBooking.guestDetails?.children?.length || 0}</p>
+            <p><strong>Animaux :</strong> ${updatedBooking.guestDetails?.pets?.length || 0}</p>
+            <p><strong>Pack linge :</strong> ${updatedBooking.additionalServices?.linen?.included ? '✅ OUI' : '❌ NON'}</p>
+
+            <hr>
+
+            <h3>💰 Paiement :</h3>
+            <p><strong>Type :</strong> <span style="color: ${isPartialPayment ? 'orange' : 'green'}; font-weight: bold;">${paymentType}</span></p>
+            <p><strong>Montant payé :</strong> ${updatedBooking.price} €</p>
+            ${isPartialPayment ? `<p><strong>Montant total :</strong> ${updatedBooking.totalPrice} €</p>` : ''}
+
+            <hr>
+
+            ${updatedBooking.guestDetails?.specialRequests ? `
+            <h3>💬 Demandes spéciales :</h3>
+            <p><em>"${updatedBooking.guestDetails.specialRequests}"</em></p>
+            <hr>
+            ` : ''}
+
+            <p style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin: 20px 0;">
+              <strong>📝 Action requise :</strong> Merci de préparer le logement pour l'arrivée du ${new Date(updatedBooking.startDate).toLocaleDateString("fr-FR")}.
+            </p>
+
+            <p><em>Cet email est généré automatiquement par le système ImmoVA.</em></p>
+          `,
+        });
+
+        console.log(`✅ Email de préparation envoyé à la personne tiers: ${process.env.THIRD_PARTY_EMAIL}`);
+      } catch (thirdPartyError) {
+        console.error("⚠️ Erreur envoi email personne tiers (non bloquant):", thirdPartyError);
+      }
+    }
+
     // Réponse front
     res.json({ success: true, booking: updatedBooking });
   } catch (err) {
