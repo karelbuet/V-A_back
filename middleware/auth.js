@@ -236,7 +236,7 @@ export const authenticateToken = async (req, res, next) => {
           const cookieConfig = {
             httpOnly: true,
             secure: isProd,
-            sameSite: isProd ? "none" : "lax", // ✅ CROSS-DOMAIN : "none" en production
+            // sameSite: isProd ? "none" : "lax", // ✅ CROSS-DOMAIN : "none" en production
             path: "/",
           };
 
@@ -281,7 +281,7 @@ export const authenticateToken = async (req, res, next) => {
         const cookieConfig = {
           httpOnly: true,
           secure: isProd,
-          sameSite: isProd ? "none" : "lax", // ✅ CROSS-DOMAIN : "none" en production
+          // sameSite: isProd ? "none" : "lax", // ✅ CROSS-DOMAIN : "none" en production
           path: "/",
         };
 
