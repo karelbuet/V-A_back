@@ -282,7 +282,17 @@ router.get("/capture-paypal-order", authenticateToken, async (req, res) => {
     }
 
     // Récupérer le montant réellement payé depuis PayPal
-    const paidAmount = data.purchase_units?.[0]?.payments?.captures?.[0]?.amount?.value || updatedBooking.totalPrice || updatedBooking.price;
+    const paypalAmount = data.purchase_units?.[0]?.payments?.captures?.[0]?.amount?.value;
+    // Utiliser totalPrice de la réservation (montant complet avec services) car c'est plus fiable
+    const paidAmount = updatedBooking.totalPrice || updatedBooking.price;
+
+    console.log("💰 Montants de debug:", {
+      paypalAmount,
+      paidAmount,
+      bookingPrice: updatedBooking.price,
+      bookingTotalPrice: updatedBooking.totalPrice,
+      paypalData: data.purchase_units?.[0]?.payments?.captures?.[0]
+    });
 
     // ✅ CORRECTION - Email confirmation client depuis notre BD utilisateur
     try {
