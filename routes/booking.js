@@ -2,6 +2,7 @@ import express from "express";
 import nodemailer from "nodemailer";
 import Cart from "../models/cart.js";
 import Booking from "../models/booking.js";
+import User from "../models/users.js";
 import GlobalSettings from "../models/globalSettings.js";
 import { authenticateToken, requireRole } from "../middleware/auth.js";
 import { rateLimitConfig } from "../middleware/security.js";
@@ -196,9 +197,24 @@ router.post("/create-request", authenticateToken, async (req, res) => {
     console.log("📧 [BOOKING] Envoi de l'email à l'hôte...");
     try {
       await EmailService.sendReservationEmail(bookings);
-      console.log("✅ [BOOKING] Email envoyé avec succès");
+      console.log("✅ [BOOKING] Email envoyé avec succès à l'hôte");
     } catch (emailError) {
-      console.error("⚠️ [BOOKING] Erreur envoi email (non bloquant):", emailError);
+      console.error("⚠️ [BOOKING] Erreur envoi email hôte (non bloquant):", emailError);
+      // Ne pas bloquer la réservation si l'email échoue
+    }
+
+    // ✅ NOUVEAU - Envoyer un email de confirmation au client
+    console.log("📧 [BOOKING] Envoi de l'email de confirmation au client...");
+    try {
+      const clientUser = await User.findById(req.user.userId);
+      if (clientUser && clientUser.email) {
+        await EmailService.sendClientConfirmationEmail(bookings, clientUser);
+        console.log("✅ [BOOKING] Email de confirmation envoyé avec succès au client");
+      } else {
+        console.log("⚠️ [BOOKING] Utilisateur ou email client introuvable");
+      }
+    } catch (emailError) {
+      console.error("⚠️ [BOOKING] Erreur envoi email client (non bloquant):", emailError);
       // Ne pas bloquer la réservation si l'email échoue
     }
 

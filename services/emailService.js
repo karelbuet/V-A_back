@@ -36,6 +36,39 @@ export class EmailService {
   }
 
   /**
+   * Envoie un email de confirmation au client
+   * @param {Array} bookings - Liste des réservations
+   * @param {Object} clientUser - Données de l'utilisateur client
+   */
+  static async sendClientConfirmationEmail(bookings, clientUser) {
+    try {
+      const transporter = nodemailer.createTransporter({
+        service: "gmail",
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+      });
+
+      // Générer l'email de confirmation client avec le système de templates
+      const htmlContent = await EmailTemplateService.generateClientConfirmationEmail(bookings, clientUser);
+
+      await transporter.sendMail({
+        from: `"🏠 ImmoVA - Confirmation" <${process.env.SMTP_USER}>`,
+        to: clientUser.email,
+        subject: `✅ Confirmation de votre demande de réservation - ${bookings.length} demande(s)`,
+        html: htmlContent,
+      });
+
+      console.log(`✅ Email de confirmation envoyé au client: ${clientUser.email}`);
+
+    } catch (error) {
+      console.error('❌ Erreur envoi email client:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Génère un aperçu de l'email (pour tests/développement)
    * @param {Array} sampleBookings - Données d'exemple (optionnel)
    * @returns {string} HTML de l'email
