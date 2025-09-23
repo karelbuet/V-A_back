@@ -232,11 +232,11 @@ export const authenticateToken = async (req, res, next) => {
           const newTokens = await SecureAuthService.refreshTokens(refreshToken);
 
           // Configuration cookies compatible Vercel
-          const isProd = process.env.NODE_ENV === "production";
+          const isProd = process.env.NODE_ENV === "production" || process.env.VERCEL === "1";
           const cookieConfig = {
             httpOnly: true,
             secure: isProd,
-            // sameSite supprimé pour compatibilité Vercel
+            sameSite: isProd ? "none" : "lax", // ✅ CROSS-DOMAIN : "none" en production
             path: "/",
           };
 
@@ -275,13 +275,13 @@ export const authenticateToken = async (req, res, next) => {
         const newTokens = await SecureAuthService.refreshTokens(refreshToken);
 
         // Définir nouveaux cookies
-        const isProd = process.env.NODE_ENV === "production";
+        const isProd = process.env.NODE_ENV === "production" || process.env.VERCEL === "1";
 
         // ✅ Configuration cookies
         const cookieConfig = {
           httpOnly: true,
           secure: isProd,
-          // sameSite supprimé pour compatibilité Vercel
+          sameSite: isProd ? "none" : "lax", // ✅ CROSS-DOMAIN : "none" en production
           path: "/",
         };
 

@@ -85,13 +85,13 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    const isProd = process.env.NODE_ENV === "production";
+    const isProd = process.env.NODE_ENV === "production" || process.env.VERCEL === "1";
 
-    // ✅ Configuration cookies simplifiée pour Vercel
+    // ✅ Configuration cookies pour cross-domain sur Vercel
     const cookieConfig = {
       httpOnly: true, // ✅ Sécurité : pas d'accès JavaScript
       secure: isProd, // ✅ HTTPS uniquement en production
-      sameSite: "lax", // Configuration sûre qui fonctionne partout
+      sameSite: isProd ? "none" : "lax", // ✅ CROSS-DOMAIN : "none" en production
       path: "/", // ✅ Cookie disponible sur tout le site
     };
 
@@ -151,13 +151,13 @@ router.post("/login", rateLimitConfig.login, async (req, res) => {
       });
     }
 
-    const isProd = process.env.NODE_ENV === "production";
+    const isProd = process.env.NODE_ENV === "production" || process.env.VERCEL === "1";
 
-    // ✅ Configuration cookies simplifiée pour Vercel
+    // ✅ Configuration cookies pour cross-domain sur Vercel
     const cookieConfig = {
       httpOnly: true,
       secure: isProd, // HTTPS en production
-      sameSite: "lax", // Configuration sûre qui fonctionne partout
+      sameSite: isProd ? "none" : "lax", // ✅ CROSS-DOMAIN : "none" en production
       path: "/",
     };
 
