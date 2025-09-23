@@ -91,7 +91,7 @@ router.post("/register", async (req, res) => {
     const cookieConfig = {
       httpOnly: true, // ✅ Sécurité : pas d'accès JavaScript
       secure: isProd, // ✅ HTTPS uniquement en production
-      sameSite: isProd ? "none" : "lax", // ✅ CROSS-DOMAIN : "none" en production
+      sameSite: isProd ? false : "lax", // ✅ CROSS-DOMAIN : false (pas de sameSite) en production
       path: "/", // ✅ Cookie disponible sur tout le site
     };
 
@@ -157,7 +157,7 @@ router.post("/login", rateLimitConfig.login, async (req, res) => {
     const cookieConfig = {
       httpOnly: true,
       secure: isProd, // HTTPS en production
-      sameSite: isProd ? "none" : "lax", // ✅ CROSS-DOMAIN : "none" en production
+      sameSite: isProd ? false : "lax", // ✅ CROSS-DOMAIN : false (pas de sameSite) en production
       path: "/",
     };
 
