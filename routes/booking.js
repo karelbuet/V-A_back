@@ -86,9 +86,13 @@ router.post("/create-request", authenticateToken, async (req, res) => {
       specialRequests: guestDetails?.specialRequests || "",
       arrivalTime: guestDetails?.arrivalTime || "",
       contactPhone: guestDetails?.contactPhone || "",
-      includeCleaning: guestDetails?.includeCleaning || false,
-      includeLinen: guestDetails?.includeLinen || false,
       reason: guestDetails?.reason || ""
+    };
+
+    // ✅ Séparer les données de services pour la logique de calcul
+    const servicePreferences = {
+      includeCleaning: guestDetails?.includeCleaning || false,
+      includeLinen: guestDetails?.includeLinen || {} // Objet par propriété
     };
 
     console.log("💾 [BOOKING] Préparation de l'insertion en base...");
@@ -141,7 +145,8 @@ router.post("/create-request", authenticateToken, async (req, res) => {
 
       // Calculer les services additionnels pour cet item spécifique
       const includeCleaning = true; // Toujours inclus
-      const includeLinen = validatedGuestDetails.includeLinen;
+      // ✅ CHANGEMENT: Vérifier le linge pour cette propriété spécifique
+      const includeLinen = servicePreferences.includeLinen[propertyName] || false;
 
       const cleaningCost = cleaningFee; // Toujours inclus
       const linenCost = includeLinen ? linenFee : 0;
